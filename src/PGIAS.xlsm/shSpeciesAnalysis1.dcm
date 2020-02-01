@@ -1,0 +1,353 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shSpeciesAnalysis1"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+'   cDPSの表示順位数
+Const CDPS_RANKS As Long = 5
+
+'   マップを見るボタン
+Private Sub btnShowMap_Click()
+    Dim species As String
+    species = getSpeciesFromCell(ActiveCell)
+    If species = "" Then Exit Sub
+    If chkSameType.Value Then
+        Call setSameTypeToMap(species, shSpeciesMap.Range(R_SpeciesMapTypeSelect))
+    End If
+    shSpeciesMap.Activate
+    shSpeciesMap.Range(R_SpeciesMapSpeciesSelect).Value = species
+End Sub
+
+'   わざを見るボタン
+Private Sub btnShowAtk_Click()
+    Call ClickShowAttack
+End Sub
+
+'   新しい種族の行を加える（種族シートがソートされている必要がある）
+Public Sub addNewSpecies(Optional ByVal withLimitedAtk As Boolean = True)
+    Dim row, col As Long
+    
+    doMacro msgSetNewSpeciesToSpeciesAnalysis1Sheet
+    Call sortNormally
+    Call copyNames
+    With ListObjects(1).DataBodyRange
+        col = getColumnIndex(SA1_ATKPower, .Parent)
+        row = 1
+        Do While .cells(row, 1).Text <> ""
+            If .cells(row, col).Text = "" Then
+                Call makeWeakness(row)
+                Call makeEndurance(row)
+                Call makeAtkAna(C_IdGym, CDPS_RANKS, row, withLimitedAtk)
+                Call makeAtkAna(C_IdMtc, CDPS_RANKS, row, withLimitedAtk)
+            End If
+            row = row + 1
+        Loop
+    End With
+    '   種族マップ
+    Call shSpeciesMap.MakeSpeciesMap
+    Call doMacro
+End Sub
+
+'   表を作り直す（時間が掛かる）
+Public Sub makeTableSpeciesAna1( _
+            Optional ByVal withLimitedAtk As Boolean = True)
+    Call doMacro(msgstr(msgMakingSheet, name))
+    Call makeHeader(CDPS_RANKS)
+    Call clearSheet
+    Call copyNames
+    Call makeWeakness
+    Call makeEndurance
+    Call makeAtkAna(C_IdGym, CDPS_RANKS, 0, withLimitedAtk)
+    Call makeAtkAna(C_IdMtc, CDPS_RANKS, 0, withLimitedAtk)
+    '   種族マップ
+    Call shSpeciesMap.MakeSpeciesMap
+    Call doMacro
+End Sub
+
+Private Sub clearSheet()
+    Dim cel As Range
+    With ListObjects(1)
+        Set cel = cells(.HeaderRowRange.row + 1, 1)
+        If Not .DataBodyRange Is Nothing Then
+            .DataBodyRange.ClearContents
+        End If
+        cel.Value = 1   '   DataBodyRangeをつくる
+        .Resize Range(.HeaderRowRange.cells(1, 1), _
+                cel.Offset(0, .HeaderRowRange.columns.count - 1))
+    End With
+End Sub
+
+'   番号、種族名、タイプをコピーする
+Private Sub copyNames()
+    Dim row, ccolor(2), i, ti As Long
+    Dim types(2), species, ref As String
+    Dim ana As Range
+    '   番号、種族名、タイプの列は決め打ち
+    Set ana = ListObjects(1).DataBodyRange
+    Call shSpecies.sortNormally
+    With shSpecies.ListObjects(1).DataBodyRange
+        For row = 1 To .rows.count
+            species = .cells(row, 2).Text
+            ref = ana.cells(row, 2).Text
+            If species <> ref Then
+                If ref <> "" Then
+                    .rows(row).Insert
+                End If
+                ana.cells(row, 1).Value = .cells(row, 1).Value
+                ana.cells(row, 2).Value = species
+                Erase types
+                For i = 0 To 1
+                    types(i) = .cells(row, i + 3).Text
+                Next
+                Call setTypeToCell(types, ana.cells(row, 3), True)
+            End If
+        Next
+    End With
+End Sub
+
+Private Function getRowRange(ByVal srow As Long) As Variant
+    If srow = 0 Then
+        getRowRange = Array(1, ListObjects(1).DataBodyRange.rows.count)
+    Else
+        getRowRange = Array(srow, srow)
+    End If
+End Function
+
+'   弱点・耐性の表を作る
+Private Sub makeWeakness(Optional ByVal srow As Long = 0)
+    Dim nameCol As Long
+    Dim row, tsrow, ti1, ti2, i, j As Long
+    Dim srcCols, destCols As Variant
+    Dim species, ts, str As String
+    Dim srcRng As Range
+    Dim rowr As Variant
+    rowr = getRowRange(srow)
+    
+    nameCol = getColumnIndex(SA1_Name, shSpeciesAnalysis1)
+    srcCols = Array(CBT_DoubleWeak, CBT_SingleWeak, CBT_SingleToler, _
+                    CBT_DoubleToler, CBT_OverToler)
+    destCols = Array(SA1_DoubleWeak, SA1_SingleWeak, SA1_SingleToler, _
+                    SA1_DoubleToler, SA1_OverToler)
+    srcCols = getColumnIndexes(shClassifiedByType, srcCols)
+    destCols = getColumnIndexes(ListObjects(1), destCols)
+    Set srcRng = shClassifiedByType.ListObjects(1).DataBodyRange
+    With shSpeciesAnalysis1.ListObjects(1).DataBodyRange
+        For row = rowr(0) To rowr(1)
+            species = .cells(row, nameCol).Text
+            ts = getJoinedTypeName(species)
+            tsrow = searchRow(ts, CBT_Type, shClassifiedByType)
+            If tsrow = 0 Then
+                MsgBox ("makeWeaknessでタイプが見つからない")
+            End If
+            For i = 0 To UBound(srcCols)
+                str = srcRng.cells(tsrow, srcCols(i)).Text
+                .cells(row, destCols(i)).Value = str
+                If str <> "" Then
+                    For j = 1 To Len(str)
+                        .cells(row, destCols(i)) _
+                            .Characters(start:=j, Length:=1) _
+                            .Font.Color _
+                        = srcRng.cells(tsrow, srcCols(i)) _
+                            .Characters(start:=j, Length:=1) _
+                            .Font.Color
+                    Next
+                End If
+            Next
+        Next
+    End With
+End Sub
+
+'   耐久力を計算して埋める
+Private Sub makeEndurance(Optional ByVal srow As Long = 0)
+    Dim row, colATKP, colDEFP, colHP, colCP, colSCP, colDCP, colEND As Long
+    Dim species As String
+    Dim HP, def, atk, endur, SCP, DCP As Double
+    Dim cels As Variant
+    Dim rowr As Variant
+    rowr = getRowRange(srow)
+    cels = getColumnIndexes(shSpeciesAnalysis1, _
+            Array(SA1_ATKPower, SA1_DEFPower, SA1_HP, _
+                SA1_CP, SA1_SCP, SA1_DCP, SA1_Endurance))
+    With ListObjects(1).DataBodyRange
+        For row = rowr(0) To rowr(1)
+            species = .cells(row, 2).Text
+            HP = getPower(species, "HP", 15, 40)
+            def = getPower(species, "DEF", 15, 40)
+            atk = getPower(species, "ATK", 15, 40)
+            .cells(row, cels(0)).Value = atk
+            .cells(row, cels(1)).Value = def
+            .cells(row, cels(2)).Value = HP
+            .cells(row, cels(3)).Value = atk * Sqr(def) * Sqr(HP) / 10
+            .cells(row, cels(4)).Value = (atk * def * HP) ^ (2 / 3) / 10
+            .cells(row, cels(5)).Value = (atk * def ^ 2 * HP ^ 2) ^ (2 / 5) / 10
+            .cells(row, cels(6)).Value = HP / (1000 / def + 1)
+        Next
+    End With
+End Sub
+
+'   わざ分析の作成
+Private Sub makeAtkAna(Optional ByVal mode As Integer = C_IdGym, _
+                Optional ByVal rnks As Long = 3, _
+                Optional ByVal srow As Long = 0, _
+                Optional ByVal withLimited As Boolean = True)
+    Dim row, col, i, j, atkClass, idx As Long
+    Dim species As String
+    Dim param As Variant
+    Dim atkParam() As AttackParam
+    Dim cDpss() As CDpsSet
+    Dim atkName As String
+    Dim ana(2) As Double
+    Dim mval(2, 1) As Variant
+    Dim rowr As Variant
+    
+    Call makeInfluenceCache
+    rowr = getRowRange(srow)
+
+    '   ループ
+    With ListObjects(1).DataBodyRange
+        For row = rowr(0) To rowr(1)
+            species = .cells(row, 2).Text
+'            Debug.Print row & species
+            Erase atkParam, cDpss
+            Call getAtkAna(atkParam, cDpss, mode, species, withLimited)
+            '   各わざの最大値の探索
+            '   書き込み列の先頭
+            col = getColumnIndex( _
+                    Array(SA1_GymBattle, SA1_MtcBattle)(mode), ListObjects(1)) + 1
+            idx = 0
+            For atkClass = 0 To 1
+                Erase mval
+                Do While idx <= UBound(atkParam)
+                    If atkClass <> atkParam(idx).class Then Exit Do
+                    With atkParam(idx)
+                        atkName = .name
+                        ana(0) = .damage
+                        ana(1) = .damageEfc
+                        ana(2) = .chargeEfc
+                        idx = idx + 1
+                    End With
+                    For j = 0 To 2 - atkClass ' ゲージにはチャージ効率はない
+                        '   最大値より大きかったら更新
+                        If ana(j) > mval(j, 1) Then
+                            mval(j, 0) = atkName: mval(j, 1) = ana(j)
+                        '   最大値と同じであったら、名前を加えておく
+                        ElseIf ana(j) <> 0 And ana(j) = mval(j, 1) Then
+                            mval(j, 0) = mval(j, 0) & "," & atkName
+                        End If
+                    Next
+                Loop
+                '   書き込み
+                For j = 0 To 2 - atkClass
+                    If Not IsEmpty(mval(j, 0)) Then
+                        Call setAtkNames(atkClass, mval(j, 0), .cells(row, col))
+                        .cells(row, col + 1).Value = mval(j, 1)
+                    End If
+                    col = col + 2
+                Next
+            Next
+            '   cDPSランクの書き込み
+            For i = 0 To UBound(cDpss)
+                If i >= rnks Then Exit For
+                Call setAtkNames(C_IdNormalAtk, cDpss(i).natk, .cells(row, col))
+                Call setAtkNames(C_IdSpecialAtk, cDpss(i).satk, .cells(row, col + 1))
+                .cells(row, col + 2).Value = cDpss(i).cDPS
+                col = col + 3
+            Next
+        Next
+    End With
+End Sub
+
+'   ヘッダの作成
+Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
+    Dim hTop, hAna, hAnaT, hDcp, btlTitle, btlName As Variant
+    Dim hDcpT, sn As String
+    Dim row, col, i, n, blt, j As Long
+
+    hTop = Array(SA1_Number, SA1_Name, SA1_Type, SA1_DoubleWeak, _
+                SA1_SingleWeak, SA1_SingleToler, SA1_DoubleToler, _
+                SA1_OverToler, SA1_ATKPower, SA1_DEFPower, SA1_HP, _
+                SA1_CP, SA1_SCP, SA1_DCP, SA1_Endurance)
+    hAna = Array(SA1_NA_DamageAtkName, SA1_NA_DamageValue, _
+                SA1_NA_DpsAtkName, SA1_NA_DpsValue, _
+                SA1_NA_EpsAtkName, SA1_NA_EpsValue, _
+                SA1_SA_DamageAtkName, SA1_SA_DamageValue, _
+                SA1_SA_DpsAtkName, SA1_SA_DpsValue)
+    hAnaT = Array(SA1_NA_Damage, SA1_NA_Dps, SA1_NA_Eps, _
+                SA1_SA_Damage, SA1_SA_Dps)
+    hDcp = Array(SA1_CDSP_NormalAtkName, SA1_CDSP_SpecialAtkName, _
+                SA1_CDSP_Value)
+    hDcpT = SA1_cDpsRank
+    btlTitle = Array(SA1_GymBattleT, SA1_MtcBattleT)
+    btlName = Array(SA1_GymBattle, SA1_MtcBattle)
+    row = ListObjects(1).HeaderRowRange.row
+    col = 1
+    '   先頭の情報
+    For i = 0 To UBound(hTop)
+        If hTop(i) = SA1_DoubleWeak Then cells(row - 1, col).Value = SA1_Weakness
+        If hTop(i) = SA1_SingleToler Then cells(row - 1, col).Value = SA1_Tolerance
+        If hTop(i) = SA1_ATKPower Then cells(row - 1, col).Value = SA1_Param
+        cells(row, col).Value = hTop(i)
+        col = col + 1
+    Next
+    '   わざの解析値
+    For btl = 0 To 1
+        '   TBでのタイトルの修正
+        If btl = 1 Then
+            For j = 0 To UBound(hAna)
+                hAna(j) = Replace(hAna(j), "_g", "_m")  '   サフィックスの変換
+                If InStr(hAna(j), "sDps") Then  '   ゲージ技のDPSなら
+                    hAna(j) = Replace(hAna(j), "PS", "PE")  '   DPEにする
+                Else
+                    hAna(j) = Replace(hAna(j), "PS", "PT") '   PSをPTにする
+                End If
+            Next
+            For j = 0 To UBound(hAnaT)
+                If hAnaT(j) = SA1_SA_Dps Then
+                    hAnaT(j) = Replace(hAnaT(j), "PS", "PE")
+                Else
+                    hAnaT(j) = Replace(hAnaT(j), "PS", "PT")
+                End If
+            Next
+            hDcpT = Replace(hDcpT, "PS", "PT")
+            For j = 0 To UBound(hDcp)
+                hDcp(j) = Replace(hDcp(j), "PS", "PT")
+                hDcp(j) = Replace(hDcp(j), "_g", "_m")
+            Next
+        End If
+        '   バトルの種類
+        cells(row - 1, col).Value = btlTitle(btl)
+        cells(row, col).Value = btlName(btl)
+        col = col + 1
+        '   解析値
+        For i = 0 To UBound(hAna)
+            cells(row, col).Value = hAna(i)
+            If i Mod 2 = 0 Then
+                cells(row - 1, col).Value = hAnaT(Int(i / 2))
+            End If
+            col = col + 1
+        Next
+        '   cDPS
+        For n = 1 To cdsp_ranks
+            sn = Trim(str(n))
+            cells(row - 1, col).Value = hDcpT & sn
+            For i = 0 To UBound(hDcp)
+                cells(row, col).Value = hDcp(i) & sn
+                col = col + 1
+            Next
+        Next
+    Next
+End Sub
+
+'   ソート
+Sub sortNormally()
+    Call sortTable(shSpeciesAnalysis1, Array(SPEC_Number, SPEC_Name))
+End Sub
+
+
+
+

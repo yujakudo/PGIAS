@@ -1,0 +1,186 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shClassifiedByType"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+'   タイプ別表の作成
+Sub makeTableClassifiedByType()
+    Dim idx2row As Variant
+    
+    Call doMacro("タイプ別シートを作成しています。")
+'    Call makeHeader
+    ListObjects(1).DataBodyRange.Clear
+    idx2row = setTypeNames
+    Call makeWeakness(idx2row)
+    Call makeSpecies(idx2row)
+    Call doMacro
+End Sub
+
+'   タイプ名の列
+'   タイプの組み合わせと、行番号を得る配列の作成
+Private Function setTypeNames() As Variant
+    Dim idx2row(), row, col, num, i, j As Long
+    num = typesNum()
+    ReDim idx2row(num, num)
+    col = getColumn(CBT_Type, cells(2, 1)).column
+    row = ListObjects(1).DataBodyRange.row
+    For i = 1 To num
+        For j = i To num
+            If j = i Then
+                idx2row(i, 0) = row
+                Call setTypeToCell(Array(getTypeName(i)), cells(row, col))
+            Else
+                idx2row(i, j) = row
+                Call setTypeToCell(Array(getTypeName(i), getTypeName(j)), cells(row, col))
+            End If
+            row = row + 1
+        Next j
+    Next i
+    setTypeNames = idx2row
+    col = getColumn(CBT_Species, cells(2, 1)).column
+    ListObjects(1).Resize Range(cells(1, 1), cells(row - 1, col))
+End Function
+
+'   弱点・耐性の表を作る
+Private Sub makeWeakness(ByRef idx2row As Variant)
+    Dim num, weakCol, row, ti1, ti2, atici, i As Long
+    Dim types As Variant
+    Dim ind(1) As Long
+    Dim weak(), alst() As Long
+    Dim ftr As Double
+    
+    Call makeInfluenceCache
+    num = typesNum()
+    weakCol = getColumnIndex(CBT_DoubleWeak, cells(1, 1))
+    For ti1 = 1 To num
+        For ti2 = ti1 To num
+            ind(0) = ti1
+            If ti1 = ti2 Then
+                ind(1) = 0
+                row = idx2row(ti1, 0)
+            Else
+                ind(1) = ti2
+                row = idx2row(ti1, ti2)
+            End If
+            ReDim weak(6, num)
+            For ati = 1 To typesNum()
+                ftr = interTypeFactor(ati, ind)
+                ci = classifyFactor(ftr)
+                weak(ci, 0) = weak(ci, 0) + 1
+                weak(ci, weak(ci, 0)) = ati
+            Next
+            '   書き込み
+            For ci = 1 To 6
+                If weak(ci, 0) > 0 Then
+                    ReDim alst(num - 1)
+                    For i = 1 To weak(ci, 0)
+                        alst(i - 1) = weak(ci, i)
+                    Next
+                    Call setTypeToCell(alst, cells(row, weakCol + ci - 1), True)
+                End If
+            Next
+        Next
+    Next
+End Sub
+
+'   相性の係数を分類する
+Private Function classifyFactor(ByVal fctr As Double) As Long
+    Dim ic As Integer
+    classifyFactor = 0
+    ic = Int(fctr * 100)
+    Select Case ic
+        Case 256
+            classifyFactor = 1
+        Case 160
+            classifyFactor = 2
+        Case 100
+            classifyFactor = 3
+        Case 62
+            classifyFactor = 4
+        Case 39
+            classifyFactor = 5
+        Case 24
+            classifyFactor = 6
+        Case Else
+            MsgBox ("Unknown factor number at classifyFactor")
+    End Select
+End Function
+
+'   種族名とタイプ
+Private Sub makeSpecies(ByRef idx2row As Variant)
+    Dim sname, str As String
+    Dim type1, type2 As Long
+    Dim numCol, lstCol, tmpCol, snameCol, stypeCol, col As Long
+    Dim num, cnt, maxNum As Long
+    Dim rng As Excel.Range
+    numCol = getColumnIndex(CBT_NumOfSpecies, cells(1, 1))
+    lstCol = getColumnIndex(CBT_Species, cells(1, 1))
+    tmpCol = lstCol + 2
+    
+    snameCol = getColumnIndex(SPEC_Name, shSpecies)
+    stypeCol = getColumnIndex(SPEC_Type1, shSpecies)
+    For idx = 1 To shSpecies.ListObjects(1).DataBodyRange.rows.count
+        With shSpecies.ListObjects(1).DataBodyRange
+            sname = .cells(idx, snameCol).Text
+            type1 = getTypeIndex(.cells(idx, stypeCol).Text)
+            type2 = getTypeIndex(.cells(idx, stypeCol + 1).Text)
+        End With
+        If type2 <> 0 And type2 < type1 Then
+            tmp = type2: type2 = type1: type1 = tmp
+        End If
+        row = idx2row(type1, type2)
+        If cells(row, tmpCol).Text = "" Then
+            col = tmpCol
+        ElseIf cells(row, tmpCol + 1).Text = "" Then
+            col = tmpCol + 1
+        Else
+            col = cells(row, tmpCol).End(xlToRight).column + 1
+        End If
+        cells(row, col).Value = sname
+        cells(row, numCol).Value = cells(row, numCol).Value + 1
+    Next
+    '   ソートと、いらない行の削除
+    cnt = 0
+    row = 2
+    While cells(row, 1).Text <> ""
+        num = cells(row, numCol).Value
+        If num > 0 Then
+            cnt = cnt + num
+            Set rng = Range(cells(row, tmpCol), cells(row, tmpCol + num - 1))
+            If num > 1 Then
+                Call rng.Sort(rng.cells(1, 1), header:=xlNo, orientation:=xlSortRows)
+            End If
+            str = ""
+            For col = 1 To rng.count
+                If str <> "" Then str = str & ","
+                str = str + rng.cells(1, col).Text
+            Next
+            rng.ClearContents
+            cells(row, lstCol).Value = str
+
+            row = row + 1
+        Else
+            cells(row, tmpCol).EntireRow.Delete
+        End If
+    Wend
+    cells(1, lstCol + 2).Value = cnt
+End Sub
+
+'   ヘッダの作成
+Private Sub makeHeader()
+    Dim header As Variant
+    Dim col As Long
+    header = Array("", CBT_Type, CBT_DoubleWeak, CBT_SingleWeak, CBT_Soso, _
+                    CBT_SingleToler, CBT_DoubleToler, CBT_OverToler, _
+                    CBT_NumOfSpecies, CBT_Species)
+    For col = 1 To UBound(header)
+        cells(1, col).Value = header(col)
+    Next
+End Sub
+
+

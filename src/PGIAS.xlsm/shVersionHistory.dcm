@@ -1,0 +1,63 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shVersionHistory"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+
+
+'   記事の追加ボタン
+Private Sub btnNewArticle_Click()
+    Dim settings As Object
+    Set settings = getGlobalSettings()
+    With ListObjects(1)
+        .ListRows.Add (1)
+        With .DataBodyRange
+            getColumn(VH_Branch, .cells(1, 1)).Value = settings(GS_BranchName)
+            getColumn(VH_Date, .cells(1, 1)).Value = Now
+        End With
+    End With
+End Sub
+
+'   リリースボタン
+Private Sub btnRelease_Click()
+    Call ReleaseFile
+End Sub
+
+'   開発用のボタンを有効にする
+Public Sub EnableButtons(Optional ByVal enable As Boolean = True)
+    btnRelease.Enabled = enable
+    btnNewArticle.Enabled = enable
+End Sub
+
+'   リリースファイルの作成
+Private Sub ReleaseFile()
+    Dim vers As Variant
+    Dim fn, ver, branch, dir As String
+    Dim settings As Object
+    
+    With shVersionHistory.ListObjects(1).DataBodyRange
+        vers = getRowValues(.cells(1, 1), Array(VH_Branch, VH_Version))
+    End With
+    If vers(0) = "" Or vers(1) = "" Then
+        MsgBox "There is no branch name or version number."
+        Exit Sub
+    End If
+    If vers(0) = "master" Then vers(0) = "" Else vers(0) = "_" & vers(0)
+    vers(1) = "_" & Replace(vers(1), ".", "_")
+    Set settings = getGlobalSettings()
+    dir = settings(GS_DistDir)
+    If Not (left(dir, 1) = "/" Or left(dir, 1) = "\" Or left(dir, 2) = ":") Then
+        dir = ThisWorkbook.Path & "\" & dir
+    End If
+    fn = dir & "\" & settings(GS_FileName) & vers(0) & vers(1) & ".xlsm"
+    '   処理の開始
+    ActiveWorkbook.Save
+    Call shControls.AllClear(False)
+    ActiveWorkbook.SaveAs fileName:=fn, FileFormat:= _
+        xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False
+End Sub

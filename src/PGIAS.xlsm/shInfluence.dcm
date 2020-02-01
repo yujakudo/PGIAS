@@ -1,0 +1,111 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shInfluence"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+'   シートの一部を作成する
+Sub alignTypeInfluTable()
+    Call doMacro(msgstr(msgMakingSheet, name))
+    Call alignSynonymColor
+    Call makeStrength
+    Call makeWeatherTable
+    Call doMacro
+End Sub
+
+'   略号に色を付ける
+Private Sub alignSynonymColor()
+    Dim i As Long
+    Dim celStr As Range
+    Dim celTbl As Range
+    Set celStr = Range(R_TypeSynonym).Offset(-1, 0)
+    Set celTbl = cells(2, 2)
+    For i = 1 To typesNum()
+        celStr.Offset(i, 0).Font.Color = celTbl.Offset(i, 0).Interior.Color
+    Next
+    celStr.Offset(i, 0).Font.ColorIndex = 0
+End Sub
+
+'   効果のあるなし表
+Private Sub makeStrength()
+    Dim row, col, i, j, idx, lst() As Long
+    Dim fctr(2) As Variant
+    Dim num(2) As Integer
+    Dim celStr As Range
+    Dim celTbl As Range
+    Dim mark, marks As String
+    marks = "●▲×"
+    ReDim lst(typesNum())
+    For j = 0 To 2
+        fctr(j) = lst
+        num(j) = 0
+    Next
+    Set celStr = Range(R_TypeSynonym).Offset(-1, 0)
+    For i = 1 To typesNum()
+        For j = 1 To typesNum()
+            mark = Range(R_InterTypeInflu).cells(i, j).Text
+            idx = InStr(marks, mark)
+            If mark <> "" And idx Then
+                idx = idx - 1
+                fctr(idx)(num(idx)) = j
+                num(idx) = num(idx) + 1
+            End If
+        Next
+        For idx = 0 To 2
+            fctr(idx)(num(idx)) = 0
+            Call setTypeToCell(fctr(idx), celStr.Offset(i, idx + 1), True)
+            num(idx) = 0
+        Next
+    Next
+    For idx = 0 To 2
+        celStr.Offset(i, idx + 1).Value = ""
+    Next
+End Sub
+
+'   天候別表
+Private Sub makeWeatherTable()
+    Dim num, idx, i As Long
+    Dim types(), arr(), ti() As Variant
+    Dim hash As Object
+    Dim stype As String
+    Set hash = CreateObject("Scripting.Dictionary")
+    
+    With Range(R_WeatherTable)
+        num = .rows.count
+        ReDim types(num), ti(num)
+        ReDim arr(typesNum() + 1)
+        '   インデックスと色のハッシュの作成と、タイプ格納配列の準備
+        For i = 1 To num
+            With .cells(i, 1)
+                hash.item(.Text) = Array(i, .Font.Color)
+            End With
+            types(i) = arr
+            ti(i) = 0
+        Next
+    End With
+    
+    With Range(R_WeatherBoost)
+        '   タイプごとに天候を得て格納。色付けしながら
+        For i = 1 To typesNum()
+            With .cells(i, 1)
+                stype = .Text
+                .Font.Color = hash.item(stype)(1)
+            End With
+            idx = hash.item(stype)(0)
+            types(idx)(ti(idx)) = i
+            ti(idx) = ti(idx) + 1
+        Next
+    End With
+    With Range(R_WeatherTable)
+        For i = 1 To num
+            types(i)(ti(i)) = 0
+            Call setTypeToCell(types(i), .cells(i, 2))
+        Next
+    End With
+End Sub
+
+

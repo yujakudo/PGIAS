@@ -1,0 +1,96 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shMatchEffective"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+
+
+'   ロケット団を追加ボタン
+Private Sub btnAddRocketTroupe_Click()
+    doMacro msgAddingRocketTroupe
+    Call SetRocketTroupe
+    doMacro
+End Sub
+
+'   計算するボタン
+Private Sub btnCalc_Click()
+    If onCalcRankingClick(shMatchEffective, chkAll.Value, ME_R_Settngs, C_IdMtc) Then
+        chkAll.Value = False
+    End If
+End Sub
+
+'   クリアボタン
+Private Sub btnClear_Click()
+    If onRemoveRankingClick(shMatchEffective, chkAll.Value, False) Then
+        chkAll.Value = False
+    End If
+End Sub
+
+'   削除ボタン
+Private Sub btnRemove_Click()
+    If onRemoveRankingClick(shMatchEffective, chkAll.Value, True) Then
+        chkAll.Value = False
+    End If
+End Sub
+
+'   全てのワイルドカードに設定ボタン
+Private Sub btnSetAllWildCards_Click()
+    Call setWildCardAll(shMatchEffective, ME_R_Settngs)
+End Sub
+
+'   セルの選択
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+    Call onRankingSelectionChange(Target)
+End Sub
+
+'   セル値の変更
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Call onRankingSheetChange(Target, ME_R_Settngs)
+End Sub
+
+'   ロケット団追加
+Private Sub SetRocketTroupe()
+    Dim rcel, wcel, scel As Range
+    Dim row As Long
+    Dim rcols, atkcols, cel As Variant
+    Dim name, stmp As String
+    
+    wcols = getColumnIndexes(ListObjects(1), _
+            Array(BE_Species, BE_Memo, BE_NormalAttack, BE_SpecialAttack))
+    With ListObjects(1).DataBodyRange
+        Set scel = .cells(.rows.count, wcols(0)).Offset(1, 0)
+    End With
+    Set wcel = scel
+    rcols = getColumnIndexes(shCpm.ListObjects(R_RocketTroupe), _
+            Array(RT_Name, RT_Number, RT_Species))
+    '   CMPシートのロケット団表でループ
+    With shCpm.ListObjects(R_RocketTroupe).DataBodyRange
+        For row = 1 To .rows.count
+            stmp = .cells(row, rcols(0)).Text
+            If stmp <> "" Then name = stmp
+            wcel.Value = .cells(row, rcols(2)).Text
+            Call speciesChange(wcel, ME_R_Settngs)
+            stmp = .cells(row, rcols(1)).Text
+            With wcel.Offset(0, wcols(1) - wcols(0))
+                .Font.ColorIndex = 0
+                .Value = name & ":" & stmp
+            End With
+            Set wcel = wcel.Offset(1, 0)
+        Next
+    End With
+    If chkRemoveAtk.Value Then
+        Call enableEvent(False)
+        For Each cel In Range(scel, wcel.Offset(-1, 0))
+            If cel.Text <> "" Then
+                cel.Offset(0, wcols(2) - wcols(0)).Value = ""
+                cel.Offset(0, wcols(3) - wcols(0)).Value = ""
+            End If
+        Next
+        Call enableEvent(True)
+    End If
+End Sub

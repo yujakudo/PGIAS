@@ -1,0 +1,134 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shGuid"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+Private Enum LC
+    H2 = 1
+    H3 = 2
+    H4 = 3
+    H5 = 4
+    ULI = 10
+    TR = 20
+    Text = 100
+End Enum
+
+
+Public Sub ExportText()
+    Dim lrow, row As Long
+    Dim fh As Integer
+    Dim cel As Variant
+    Dim ct, nct, pre As Integer
+    
+    fh = openFileWithDialog("MarkDownText, *.md", True)
+    If fh < 0 Then Exit Sub
+    cel = Array(Nothing, Nothing)
+    lrow = cells(rows.count, 2).End(xlUp).row
+    If cells(1, 1).Text <> "" Then Print #fh, "# " & cells(1, 1).Text
+    row = 2
+    While row <= lrow
+        ct = getCategory(row, cel)
+        If LC.H2 <= ct And ct <= LC.H5 Then
+            Print #fh, String(ct + 1, "#") & " " & cel(1).Text
+            row = row + 1
+            nct = 0
+        ElseIf ct = LC.ULI Then
+            nct = inListItem(fh, row, cel)
+        ElseIf ct = LC.TR Then
+            nct = inTableRow(fh, row, cel)
+        ElseIf ct = LC.Text Then
+            nct = inParagraph(fh, row, cel)
+        Else
+            row = row + 1
+            nct = getCategory(row, cel)
+            If nct = LC.Text And pre = LC.Text Then
+                Print #fh, " "
+            Else
+                Print #fh, ""
+            End If
+        End If
+        pre = ct
+    Wend
+    Close #fh
+End Sub
+
+Private Function inParagraph(ByVal fh As Integer, ByRef row As Long, _
+            ByVal cel As Variant, Optional ByVal lvl As Integer = 0, _
+            Optional ByVal lastCrLf As Boolean = True)
+    Dim nct As LC
+    Dim cont As Boolean
+    ncel = Array(Nothing, Nothing)
+    Call indent(fh, lvl)
+    Print #fh, LTrim(cel(0).Text);
+    cont = True
+    row = row + 1
+    Do
+        nct = getCategory(row, ncel)
+        If nct <> LC.Text Or ncel(0).column < cel(0).column Then Exit Do
+        If ncel(0).column > cel(0).column Then
+            If cont Then Print #fh, "  "
+            Call inParagraph(fh, row, ncel, lvl + 1, lastCrLf)
+            cont = False
+        Else
+            If cont Then
+                If left(ncel(0).Text, 1) = " " Then
+                    Print #fh, "  "
+                Else
+                    Print #fh, ""
+                End If
+            End If
+            Call indent(fh, lvl)
+            Print #fh, LTrim(ncel(0).Text);
+            cont = True
+            row = row + 1
+        End If
+    Loop While True
+    If cont And lastCrLf Then Print #fh, ""
+    inParagraph = nct
+End Function
+
+Private Function inListItem(ByVal fh As Integer, ByRef row As Long, ByVal cel As Variant)
+    Print #fh, "* ";
+    Set cel(0) = cel(1)
+    inListItem = inParagraph(fh, row, cel)
+End Function
+
+Private Function inTableRow(ByVal fh As Integer, ByRef row As Long, _
+            ByVal cel As Variant)
+'    Print #fh, "| " & cel(0).Text & " | ";
+    Print #fh, "###### " & cel(0).Text
+    Set cel(0) = cel(1)
+    inTableRow = inParagraph(fh, row, cel, , False)
+'    Print #fh, " |"
+    Print #fh, ""
+End Function
+
+Private Function getCategory(ByVal row As Long, ByRef cel As Variant) As LC
+    getCategory = 0
+    If cells(row, 1).Text <> "" Then
+        Set cel(0) = cells(row, 1)
+    Else
+        Set cel(0) = cells(row, 1).End(xlToRight)
+    End If
+    Set cel(1) = cells(row, columns.count).End(xlToLeft)
+    If cel(1).column < cel(0).column Then Exit Function
+    l = Len(cel(0).Text)
+    idx = InStr("¡›\E", cel(0).Text)
+    If cel(0).column = 1 And idx > 0 Then
+        getCategory = idx
+    ElseIf idx = 4 Then
+        getCategory = LC.ULI
+    ElseIf cel(1).column > cel(0).column Then
+        getCategory = LC.TR
+    Else
+        getCategory = LC.Text
+    End If
+End Function
+
+Private Sub indent(ByVal fh As Integer, ByVal num As Integer)
+    Print #fh, String(num, 9);
+End Sub

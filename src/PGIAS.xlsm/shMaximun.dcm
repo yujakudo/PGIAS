@@ -1,0 +1,120 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shMaximun"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+Const C_Max As String = "最大値"
+Const C_Ave As String = "平均値"
+
+'   最大値表の作成
+Sub makeMaximunValuesTable()
+    Dim row, lrow As Long
+    Dim shname As String
+    lrow = cells(rows.count, 1).End(xlUp).row
+    For row = 1 To lrow
+        shname = cells(row, 1).Text
+        If shname <> "" And shname <> C_Max And shname <> C_Ave Then
+            Call makeATable(shname, cells(row, 2))
+        End If
+    Next
+End Sub
+
+'   最大値の表一つを作る
+Private Sub makeATable(ByVal shname As String, ByVal cell As Range)
+    Dim val As Variant
+    Dim r As Range
+    With Worksheets(shname)
+        While cell.Text <> ""
+            If shname = SH_Individual Then
+                Set r = getIndivColumn(.ListObjects(1), cell.Text)
+            Else
+                Set r = .ListObjects(1).ListColumns(cell.Text).Range
+            End If
+            val = Application.WorksheetFunction.max(r)
+            cell.Offset(1, 0).Value = val
+            Set cell = cell.Offset(0, 1)
+        Wend
+    End With
+End Sub
+
+'   個体表の列選択。２つの列より最大値をえるものがある
+Private Function getIndivColumn(ByVal lst As ListObject, ByVal colName As String) As Range
+    With lst
+        If colName = left(IND_GymSpecialAtk1Damage, Len(IND_GymSpecialAtk1Damage) - 1) Then
+            Set getIndivColumn = Union(.ListColumns(IND_GymSpecialAtk1Damage).Range, _
+                            .ListColumns(IND_GymSpecialAtk2Damage).Range)
+        ElseIf colName = left(IND_GymSpecialAtk1CDPS, Len(IND_GymSpecialAtk1CDPS) - 1) Then
+            Set getIndivColumn = Union(.ListColumns(IND_GymSpecialAtk1CDPS).Range, _
+                            .ListColumns(IND_GymSpecialAtk2CDPS).Range)
+        ElseIf colName = left(IND_MtcSpecialAtk1Damage, Len(IND_MtcSpecialAtk1Damage) - 1) Then
+            Set getIndivColumn = Union(.ListColumns(IND_MtcSpecialAtk1Damage).Range, _
+                            .ListColumns(IND_MtcSpecialAtk2Damage).Range)
+        ElseIf colName = left(IND_MtcSpecialAtk1CDPS, Len(IND_MtcSpecialAtk1CDPS) - 1) Then
+                Set getIndivColumn = Union(.ListColumns(IND_MtcSpecialAtk1CDPS).Range, _
+                                .ListColumns(IND_MtcSpecialAtk2CDPS).Range)
+        Else
+            Set getIndivColumn = .ListColumns(colName).Range
+        End If
+    End With
+End Function
+
+'   最大値表の作成(式にする)
+Sub replaceFormulaOfMaximunValuesTable()
+    Dim row, lrow As Long
+    Dim shname As String
+    lrow = cells(rows.count, 1).End(xlUp).row
+    For row = 1 To lrow
+        shname = cells(row, 1).Text
+        If shname <> "" And shname <> C_Max And shname <> C_Ave Then
+            Call replaceATable(shname, cells(row, 2))
+        End If
+    Next
+End Sub
+
+'   最大値の表一つを作る
+Private Sub replaceATable(ByVal shname As String, ByVal cell As Range)
+    Dim val As Variant
+    Dim r As String
+    Dim tblName As String
+    With Worksheets(shname)
+        tblName = .ListObjects(1).name
+        While cell.Text <> ""
+            If shname = shIndividual.name Then
+                r = getIndivFormula(.ListObjects(1), cell.Text)
+            Else
+                r = tblName & "[" & cell.Text & "]"
+            End If
+            cell.Offset(1, 0).Formula = "=Max(" & r & ")"
+            cell.Offset(2, 0).Formula = "=Average(" & r & ")"
+            Set cell = cell.Offset(0, 1)
+        Wend
+    End With
+End Sub
+
+'   個体表の列選択。２つの列より最大値をえるものがある
+Private Function getIndivFormula(ByVal lst As ListObject, ByVal colName As String) As String
+    With lst
+        If colName = left(IND_GymSpecialAtk1Damage, Len(IND_GymSpecialAtk1Damage) - 1) Then
+            getIndivFormula = .name & "[" & IND_GymSpecialAtk1Damage & "], " _
+                            & .name & "[" & IND_GymSpecialAtk2Damage & "]"
+        ElseIf colName = left(IND_GymSpecialAtk1CDPS, Len(IND_GymSpecialAtk1CDPS) - 1) Then
+            getIndivFormula = .name & "[" & IND_GymSpecialAtk1CDPS & "], " _
+                            & .name & "[" & IND_GymSpecialAtk2CDPS & "]"
+        ElseIf colName = left(IND_MtcSpecialAtk1Damage, Len(IND_MtcSpecialAtk1Damage) - 1) Then
+            getIndivFormula = .name & "[" & IND_MtcSpecialAtk1Damage & "], " _
+                            & .name & "[" & IND_MtcSpecialAtk2Damage & "]"
+        ElseIf colName = left(IND_MtcSpecialAtk1CDPS, Len(IND_MtcSpecialAtk1CDPS) - 1) Then
+            getIndivFormula = .name & "[" & IND_MtcSpecialAtk1CDPS & "], " _
+                            & .name & "[" & IND_MtcSpecialAtk2CDPS & "]"
+        Else
+            getIndivFormula = .name & "[" & colName & "]"
+        End If
+    End With
+End Function
+
+

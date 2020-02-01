@@ -1,0 +1,296 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shControls"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+'   全てクリア
+Private Sub btnAllClear_Click()
+    Call AllClear(True)
+End Sub
+
+'   イベント有効・自動計算
+Private Sub btnEnableEvent_Click()
+    Call a_resetDoMacro
+    '   保険
+    Application.Calculation = xlCalculationAutomatic
+    Application.EnableEvents = True
+End Sub
+
+'   個体表のエクスポート
+Private Sub btnExportIndividual_Click()
+    Call shIndividual.export
+End Sub
+
+'   個体表のインポート
+Private Sub btnImportIndividual_Click()
+    Call shIndividual.import
+End Sub
+
+'   基本データのエクスポート
+Private Sub btnExpotBasicData_Click()
+    Call ExportBasicData
+End Sub
+
+Private Sub btnImportTest_Click()
+    Call MargeImportBasicData(False, True)
+End Sub
+
+'   基本データのマージインポート
+Private Sub btnMargeImportBasicData_Click()
+    Call MargeImportBasicData(chkOverwriteImport.Value)
+End Sub
+
+'   相関シートの諸表作成
+Private Sub btnInfluenceSheet_Click()
+    Call shInfluence.alignTypeInfluTable
+End Sub
+
+'   種族を追加した
+Private Sub btnAddSpecies_Click()
+    Call shSpecies.sortNormally
+    Call shSpecies.alignTableSpecies
+    Call shClassifiedByType.makeTableClassifiedByType
+    Call shSpeciesAnalysis1.addNewSpecies( _
+            chkSpeciesAnaWithLimited.Value)
+End Sub
+
+'   技を追加した
+Private Sub btnAddAttacks_Click()
+    Call shNormalAttack.alignNormalAtkTable
+    Call shSpecialAttack.alignSpecialAtkTable
+End Sub
+
+'   種族分析シートの再作成
+Private Sub btnMakeSpeciesAnalysis_Click()
+    Call shSpeciesAnalysis1.makeTableSpeciesAna1( _
+            chkSpeciesAnaWithLimited.Value)
+End Sub
+
+'   非表示列の表示
+Private Sub btnShowHiddenColumns_Click()
+    Call ShowCorrColumns(True)
+End Sub
+
+'   テーブルヘッダのサフィックス表示
+Private Sub chkShowSuffix_Click()
+    Call switchHeaderSuffixes(chkShowSuffix.Value)
+End Sub
+
+'   Verシートの開発用ボタン
+Private Sub chkVersionHistoryButtons_Click()
+    Call shVersionHistory.EnableButtons(chkVersionHistoryButtons.Value)
+End Sub
+
+'   個体シートの再計算
+Private Sub shCalcAllIndividuals_Click()
+    Call shIndividual.calcAllIndividualTable
+End Sub
+
+'   種族・技シートのソート
+Public Sub SortBasicTables()
+    Call shSpecies.sortNormally
+    Call deselectSpecies
+    Call sortTable(shNormalAttack, Array(ATK_Name))
+    Call sortTable(shSpecialAttack, Array(ATK_Name))
+End Sub
+
+'   種族と技のデータのエクスポート
+Public Function ExportBasicData() As Boolean
+    Dim fh As Integer
+    Dim rng As Range
+    Dim lcol As Long
+    Dim sh As Variant
+    
+    saveSpeciesAndAttackData = False
+    '   ファイルオープン
+    fh = openFileWithDialog("Text,*.txt", True, "PGData")
+    If fh < 0 Then Exit Function
+    Call doMacro(msgExporting)
+    '   テーブルのソート
+    Call SortBasicTables
+    '   書き出し
+    Call saveCsv(fh, shSpecies.ListObjects(1).DataBodyRange)
+    For Each sh In Array(shNormalAttack, shSpecialAttack)
+        With sh.ListObjects(1).DataBodyRange
+            lcol = getColumnIndex(ATK_typeMatch, .Parent) - 1
+            Set rng = sh.Range(.cells(1, 1), .cells(.rows.count, lcol))
+        End With
+        Print #fh, ""
+        Call saveCsv(fh, rng)
+    Next
+    Close #fh
+    Call doMacro
+    saveSpeciesAndAttackData = True
+End Function
+
+'   種族と技のデータのマージインポート
+Public Function MargeImportBasicData(Optional ByVal overwrite As Boolean = False, _
+                Optional ByVal isTest As Boolean = False)
+    Dim atkcols As Variant
+    Dim log, sh As Variant
+    Dim ln As Integer
+    
+    Close #1
+    MargeImportBasicData = False
+    log = Array("", "", "")
+    '   ファイルオープン
+    fh = openFileWithDialog("Text,*.txt")
+    If fh < 0 Then Exit Function
+    Call doMacro(msgExporting)
+    '   テーブルのソート
+    Call SortBasicTables
+    '   種族シート
+    atkcols = Array(SPEC_NormalAttack, SPEC_NormalAttackLimited, _
+                    SPEC_SpecialAttack, SPEC_SpecialAttackLimited)
+    atkcols = getColumnIndexes(shSpecies, atkcols)
+    log(ln) = margeCsv(fh, shSpecies.ListObjects(1).DataBodyRange.cells(1, 1), _
+            SPEC_Name, , isTest, _
+            Array(shControls, "margeCellOfSpecies", Array(overwrite, atkcols)))
+    '   通常わざ
+    ln = ln + 1
+    For Each sh In Array(shNormalAttack, shSpecialAttack)
+        log(ln) = margeCsv(fh, sh.ListObjects(1).DataBodyRange.cells(1, 1), _
+            ATK_Name, , isTest, _
+            Array(shControls, "writeCellOfAttack", Array(overwrite)))
+        ln = ln + 1
+    Next
+    Close #fh
+    If Not isTest Then
+        Call shSpecies.alignTableSpecies
+        Call shNormalAttack.alignNormalAtkTable
+        Call shSpecialAttack.alignSpecialAtkTable
+    End If
+    Call margeLog(log, isTest)
+    Call doMacro
+End Function
+
+'   わざのシートのコールバック
+Public Function writeCellOfAttack(ByVal args As Variant) As String
+    If args(2)(0) Then args(0).Value = args(1)
+End Function
+
+'   種族シートのコールバック
+Public Function margeCellOfSpecies(ByVal args As Variant) As String
+    Dim col, val As Variant
+    Dim cel As Range
+    Set cel = args(0)
+    val = args(1)
+    For Each col In args(2)(1)
+        If col = cel.column Then
+            margeCellOfSpecies = margeAttacks(cel, val, args(2)(0))
+            Exit Function
+        End If
+    Next
+    If args(2)(0) Then cel.Value = val
+End Function
+
+'   技のセルのマージ
+Private Function margeAttacks(ByVal cel As Range, ByVal newVal As String, _
+                    ByVal overwrite As Boolean) As String
+    Dim atks, newAtks, item As Variant
+    Dim lim, idx As Integer
+    Dim testStr, stmp, slog As String
+    If newVal = "" Then Exit Function
+    atks = Split(cel.Text, ",")
+    lim = UBound(atks)
+    newAtks = Split(newVal, ",")
+    ReDim Preserve atks(lim + UBound(newAtks) + 1)
+    testStr = "," & cel.Text & ","
+    For Each item In newAtks
+        If InStr(testStr, "," & item & ",") < 1 Then
+            If slog <> "" Then slog = slog & ","
+            slog = slog & item
+            testStr = testStr & item & ","
+            If overwrite Then
+                lim = lim + 1
+                atks(lim) = item
+                idx = lim - 1
+                Do While idx >= 0
+                    If StrConv(atks(idx), vbKatakana) <= StrConv(atks(idx + 1), vbKatakana) Then Exit Do
+                    stmp = atks(idx): atks(idx) = atks(idx + 1): atks(idx + 1) = stmp
+                    idx = idx - 1
+                Loop
+            End If
+        End If
+    Next
+    If overwrite Then cel.Value = Join(atks, ",")
+    If slog <> "" Then
+        margeAttacks = "Added " & slog
+    Else
+        margeAttacks = "no new item"
+    End If
+End Function
+
+'   ログの結合と表示
+Private Sub margeLog(ByRef log As Variant, ByVal isTest As Boolean)
+    Dim sh As Variant
+    Dim i, fh As Integer
+    Dim tlog, fn As String
+    
+    sh = Array(shSpecies, shNormalAttack, shSpecialAttack)
+    For i = 0 To UBound(log)
+        If log(i) <> "" Then
+            If tlog <> "" Then tlog = tlog & vbCrLf
+            tlog = tlog & "[" & sh(i).name & "]" & vbCrLf & log(i)
+        End If
+    Next
+    If tlog = "" And Not isTest Then
+        If vbYes = MsgBox(msgDoesOpenLog, vbYesNo) Then isTest = True
+    End If
+    If isTest Then
+        If tlog = "" Then
+             MsgBox msgNoChange
+        Else
+            fn = ThisWorkbook.Path & "\" & "PGImportLog.txt"
+            fh = FreeFile
+            Open fn For Output As #fh
+            Print #fh, tlog;
+            Close #fh
+            CreateObject("Shell.Application").ShellExecute fn
+        End If
+    End If
+End Sub
+
+'   全てクリア
+Public Sub AllClear(Optional ByVal comfirm As Boolean = True)
+    Dim sh As Variant
+    If comfirm Then
+        If vbOK <> MsgBox(msgSureToAllClear, vbOKCancel) Then Exit Sub
+    End If
+    Call doMacro(msgstr(msgProcessing, Array(msgAllSheet, msgClear)))
+    Call SortBasicTables                '   種族・技のソートとリセット
+    Call shSpeciesMap.ResetSpeciesMap   '   種族マップのリセット
+    Call shIndividual.ClearData         '   個体シートのクリア
+    Call shIndivMap.ClearIndivMap       '   個体マップのクリア
+    Call onRemoveRankingClick(shGymEffective, True, True, False)  '   ジムのクリア
+    Call onRemoveRankingClick(shMatchEffective, True, True, False) '   対戦のクリア
+    Call shNewEntries.ClearNewEntries   '   期待個体のクリア
+    Call doMacro
+    For Each sh In Worksheets
+        sh.Activate
+        If sh.ListObjects.count > 0 Then
+            With sh.ListObjects(1)
+                If Not .DataBodyRange Is Nothing Then
+                    Application.Goto .DataBodyRange.cells(1, 1)
+                Else
+                    Application.Goto .HeaderRowRange.cells(1, 1).Offset(1, 0)
+                End If
+            End With
+        ElseIf Not sh Is shLicenseAgreement Then
+            Application.Goto sh.cells(1, 1), True
+        End If
+    Next
+    '   開発用のチェック項目
+    chkShowSuffix.Value = False
+    Call chkShowSuffix_Click
+    chkVersionHistoryButtons.Value = False
+    Call chkVersionHistoryButtons_Click
+    '   利用許諾のリセット
+    Call shLicenseAgreement.ResetLicenseAgreement
+    shLicenseAgreement.Activate
+End Sub

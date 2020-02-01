@@ -1,0 +1,513 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shIndividual"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+'   わざを見るボタン
+Private Sub btnShowAtk_Click()
+    Call ClickShowAttack
+End Sub
+
+Private Sub btnShowAtk2_Click()
+    Call ClickShowAttack
+End Sub
+
+'   マップで見るボタン
+Private Sub btnShowMap_Click()
+    Dim species As String
+    Dim name As String
+    species = getSpeciesFromCell(ActiveCell)
+    name = getColumn(IND_Nickname, ActiveCell).Text
+    If species = "" Then Exit Sub
+    If chkSameType.Value Then
+        Call setSameTypeToMap(species, shIndivMap.Range(R_IndivMapTypeSelect))
+    End If
+    shIndivMap.Activate
+    shIndivMap.Range(R_IndivMapIndivSelect).Value = name
+End Sub
+
+'   種属表をみる
+Private Sub btnShowSpeciesTable_Click()
+    Dim species As String
+    Dim row As Long
+    If ActiveCell.CountLarge <> 1 Or _
+        Application.Intersect(ActiveCell, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
+    species = getColumn(IND_Species, ActiveCell).Text
+    With shSpecies
+        row = searchRow(species, SPEC_Name, .ListObjects(1))
+        .Activate
+        .ListObjects(1).DataBodyRange.cells(row, 1).Activate
+    End With
+    With shSpeciesAnalysis1
+        row = searchRow(species, SA1_Name, .ListObjects(1))
+        .Activate
+        .ListObjects(1).DataBodyRange.cells(row, 1).Activate
+    End With
+End Sub
+
+'   セルの選択
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+    Dim tcol As String
+    '   複数セル選択か、テーブルデータの選択でないなら終了
+    If Target.CountLarge <> 1 Or _
+        Application.Intersect(Target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
+    Call setInputList   '   前の入力規則のクリア
+    tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).Text
+    '   タイプ2の選択
+    If tcol = IND_Type2 Then
+        Call Type2Selected(Target)
+    '   種族名
+    ElseIf tcol = IND_Species Then
+        Call speciesSelected(Target)
+    '   わざ
+    ElseIf tcol = IND_NormalAtk Or tcol = IND_SpecialAtk1 Or tcol = IND_SpecialAtk2 _
+            Or tcol = IND_TargetNormalAtk Or tcol = IND_TargetSpecialAtk Then
+        Call AtkSelected(Target)
+    End If
+End Sub
+
+'   セル値の変更
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Dim tcol As String
+    If Application.Intersect(Target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
+    '   全角スペースのみはクリア
+    If Target.Text = "　" Then Target.ClearContents: Exit Sub
+    tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).Text
+    ' タイプ1,2
+    If tcol = IND_Type1 Or tcol = IND_Type2 Then
+        Call TypeChange(Target)
+    '   種族名
+    ElseIf tcol = IND_Species Then
+        Call speciesChange(Target)
+    '   PL
+    ElseIf tcol = IND_CP Or tcol = IND_HP Or tcol = IND_fixPL Or tcol = IND_TargetPL _
+            Or tcol = IND_indATK Or tcol = IND_indDEF Or tcol = IND_indHP Then
+        shIndividual.Calculate
+        Call setAtkParams(Target)
+    '   わざ
+    ElseIf tcol = IND_NormalAtk Or tcol = IND_SpecialAtk1 Or tcol = IND_SpecialAtk2 _
+            Or tcol = IND_TargetNormalAtk Or tcol = IND_TargetSpecialAtk Then
+        Call AtkChange(Target)
+        Call setAtkParams(Target)
+    End If
+End Sub
+
+'   タイプ2選択。入力規則を設定する
+Private Sub Type2Selected(ByVal Target As Range)
+    Dim lst As String
+    lst = getType2Candidate(Target.Offset(0, -1).Text)
+    Call setInputList(Target, lst)
+End Sub
+
+'   タイプの変更、色を変える
+Private Sub TypeChange(ByVal Target As Range)
+    Dim tc As Long
+    tc = getTypeIndex(Target.Text)
+    If tc Then
+        tc = getTypeColor(tc)
+        Target.Font.Color = tc
+    Else
+        Target.Font.ColorIndex = 1
+    End If
+End Sub
+
+'   種族名の選択。入力規則を設定する。
+Private Sub speciesSelected(ByVal Target As Range)
+    Dim lst As String
+    lst = getSpecCandidate(getColumn(IND_Type1, Target).Text, _
+                            getColumn(IND_Type2, Target).Text)
+    Call setInputList(Target, lst)
+End Sub
+
+'   種族名の変更。
+Private Sub speciesChange(ByVal Target As Range)
+    Dim setTypes As Boolean
+    setTypes = True
+    ' 種族名が消されたら、タイプもクリア
+    If Target.Text = "" Then
+        Call enableEvent(False)
+        getColumn(IND_Type1, Target).Value = ""
+        getColumn(IND_Type2, Target).Value = ""
+        Call enableEvent(True)
+    End If
+    ' タイプの入力がなかったら予測候補の設定
+    If getColumn(IND_Type1, Target).Text = "" _
+            And getColumn(IND_Type2, Target).Text = "" Then
+        setTypes = speciesExpectation(Target)
+    End If
+    '   タイプを確定させる
+    If setTypes Then
+        Call setTypeFromSpecies(Target)
+        getColumn(IND_Number, Target).Value = getSpcAttr(Target.Text, SPEC_Number)
+    End If
+End Sub
+
+'   種族名よりタイプの決定
+Private Sub setTypeFromSpecies(ByVal Target As Range)
+    Dim species As String
+    Dim types As Variant
+    Dim ee As Boolean
+    species = getColumn(IND_Species, Target).Text
+    
+    If species = "" Then Exit Sub
+    types = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2))
+    If Not IsArray(types) Then Exit Sub
+'    Call enableEvent(False)
+    getColumn(IND_Type1, Target).Value = types(0)
+    getColumn(IND_Type2, Target).Value = types(1)
+'    Call enableEvent(True)
+End Sub
+
+'   わざの数値のセット
+Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As Boolean = False)
+    Dim tcol As String
+    Dim self As Monster
+    Dim enemy As Monster
+    Dim atkIdx, cols As Variant
+    Dim idx, atkClass, mode As Integer
+    Dim curPL As Double
+    Dim changed(1), changedTargetAtk, changedCurPL, changedPrPL As Boolean
+    
+    Call getIndividual(Target, self)
+    '   変化した列タイトルの取得と、その概要の真偽値
+    tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).Text
+    changed(C_IdNormalAtk) = InStr(tcol, C_NormalAttack) > 0
+    changed(C_IdSpecialAtk) = InStr(tcol, C_SpecialAttack) > 0
+    changedTargetAtk = (tcol = IND_TargetNormalAtk Or tcol = IND_TargetSpecialAtk)
+    changedPrPL = (tcol = IND_TargetPL)
+    
+    Call getMonster(enemy)   '   ダミー値
+    curPL = self.PL
+    prPL = getColumn(IND_prPL, Target).Value
+    '   設定列タイトルの取得
+    cols = getSettingColumns()
+    '   書き込み
+    Call enableEvent(False)
+    For mode = 0 To 1
+        Call setIndividualAttacks(self, mode, 2, Target)
+        '   最初に一回わざのインデックスの取得。技が設定されている必要があるため
+        If mode = 0 Then
+            atkIdx = getAtkIndex(self, prPL)
+        End If
+        self.atkIndex(0).selected = atkIdx(C_IdNormalAtk, 0)
+        self.atkIndex(1).selected = atkIdx(C_IdSpecialAtk, 0)
+        If force Or (Not changedTargetAtk And Not changedPrPL) Then
+            If mode = 1 Then
+                self.PL = curPL
+                Call calcMonPowers(self)
+            End If
+            If force Or Not changed(C_IdSpecialAtk) Then
+                '   通常
+                Call setDamageAndDPS(Target, cols(0)(mode), _
+                        self, enemy, atkIdx(C_IdNormalAtk, 0))
+            End If
+            '   ゲージ
+            Call setDamageAndDPS(Target, cols(1)(mode), _
+                    self, enemy, atkIdx(C_IdSpecialAtk, 0))
+            '   ゲージ2
+            idx = atkIdx(C_IdSpecialAtk, 0) + 1
+            If idx > self.atkIndex(1).upper Then idx = -1
+            Call setDamageAndDPS(Target, cols(2)(mode), self, enemy, idx)
+        End If
+        '   予測
+        self.PL = prPL
+        Call calcMonPowers(self)
+        self.atkIndex(0).selected = self.atkIndex(0).lower
+        self.atkIndex(1).selected = self.atkIndex(1).lower
+        If force Or Not changed(C_IdSpecialAtk) Then
+            '   予測ジム通常
+            Call setDamageAndDPS(Target, cols(3)(mode), _
+                    self, enemy, atkIdx(C_IdNormalAtk, 1))
+        End If
+        If force Or Not changed(C_IdNormlaAtk) Then
+            '   予測ジムゲージ
+            Call setDamageAndDPS(Target, cols(4)(mode), _
+                    self, enemy, atkIdx(C_IdSpecialAtk, 1))
+        End If
+        '   予測ジムcDPS
+        self.atkIndex(0).selected = self.atkIndex(0).lower
+        idx = 0
+        If curPL = prPL And atkIdx(C_IdNormalAtk, 1) < 0 And atkIdx(C_IdSpecialAtk, 1) < 0 Then idx = -1
+        Call setCDPS(Target, cols(5)(mode), self, enemy, idx)
+    Next
+    Call enableEvent(True)
+End Sub
+
+'   ダメージとDPSのセット
+Private Sub setDamageAndDPS(ByVal Target As Range, ByVal columns As Variant, _
+                ByRef self As Monster, ByRef enemy As Monster, _
+                ByVal atkIdx As Integer)
+    Dim col As Variant
+    Dim idx As Integer
+    Dim colLim As Integer
+    colLim = UBound(columns)
+    If self.PL > 0 And atkIdx >= 0 Then
+        Call calcADamage(atkIdx, self, enemy, True)
+        Call setAtkNameToCol(self, atkIdx, columns(0), Target)
+        With self.attacks(atkIdx)
+            idx = 1
+            getColumn(columns(idx), Target).Value = .damage
+            idx = idx + 1
+            '   対戦のゲージわざはDPSなし
+            If self.mode <> C_IdMtc Or .class <> 1 Then
+                getColumn(columns(idx), Target).Value = .damage / .idleTime
+                idx = idx + 1
+            End If
+            If .class = 1 And idx <= colLim Then
+                self.atkIndex(1).selected = atkIdx
+                getColumn(columns(idx), Target).Value = calcCDPS(self, enemy, True)
+                idx = idx + 1
+            End If
+        End With
+    Else
+        Call eraseColumns(columns, Target)
+    End If
+End Sub
+
+'   cDPSのセット
+Private Sub setCDPS(ByVal Target As Range, ByVal columns As Variant, _
+                ByRef self As Monster, ByRef enemy As Monster, _
+                ByVal atkIdx As Integer)
+    Dim maxCDPS, cDPS As Double
+    Dim maxAtkIdx(1) As Integer
+    Dim colLim As Integer
+    Dim cel As Range
+    colLim = UBound(columns)
+    '   インデックスが有効範囲ならcDPSの計算
+    If self.PL > 0 And atkIdx > 0 And self.atkIndex(1).lower <= atkIdx And atkIdx <= self.atkIndex(1).upper Then
+        self.atkIndex(1).selected = atkIdx
+        getColumn(columns(0), Target).Value = calcCDPS(self, enemy, True)
+        If colLim >= 1 Then getColumn(columns(1), Target).Value = self.attacks(self.atkIndex(0).selected).name
+        If colLim >= 2 Then getColumn(columns(2), Target).Value = self.attacks(self.atkIndex(1).selected).name
+    '   0で有効なら最大値を計算
+    ElseIf self.PL > 0 And atkIdx = 0 And self.atkIndex(1).lower >= 0 Then
+        maxAtkIdx(0) = self.atkIndex(0).selected
+        For atkIdx = self.atkIndex(1).lower To self.atkIndex(1).upper
+            self.atkIndex(1).selected = atkIdx
+            cDPS = calcCDPS(self, enemy, True)
+            If maxCDPS < cDPS Then
+                maxCDPS = cDPS
+                maxAtkIdx(1) = atkIdx
+            End If
+        Next
+        getColumn(columns(0), Target).Value = maxCDPS
+        If colLim >= 1 Then Call setAtkNameToCol(self, maxAtkIdx(0), columns(1), Target)
+        If colLim >= 2 Then Call setAtkNameToCol(self, maxAtkIdx(1), columns(2), Target)
+    '   それ以外は消す
+    Else
+        Call eraseColumns(columns, Target)
+    End If
+End Sub
+
+'   他列に技名をセットする
+Private Sub setAtkNameToCol(ByRef mon As Monster, ByVal atkIdx As Integer, _
+                ByVal column As Variant, ByVal Target As Range)
+    Dim cel As Range
+    
+    If column = "" Then Exit Sub
+    Set cel = getColumn(column, Target)
+    If atkIdx >= 0 Then
+        With mon.attacks(atkIdx)
+            cel.Value = .name
+            cel.Font.Color = getTypeColor(.itype)
+        End With
+    Else
+        cel.Value = ""
+        cel.Font.ColorIndex = 1
+    End If
+End Sub
+
+'   指定の列の値を消す
+Private Sub eraseColumns(columns As Variant, ByVal Target As Range)
+    Dim col As Variant
+    For Each col In columns
+        If col <> "" Then getColumn(col, Target).Value = ""
+    Next
+End Sub
+
+'   技インデックスの取得。添字1は通常かゲージか、添字2は現在値か予測値か
+Private Function getAtkIndex(ByRef self As Monster, ByVal prPL As Double)
+    Dim atkIdx(1, 1) As Integer
+    For atkClass = 0 To 1
+        With self.atkIndex(atkClass)
+            atkIdx(atkClass, 0) = -1        '   手持ち
+            atkIdx(atkClass, 1) = .lower    '   目標技
+            ' とにかく技がある
+            If atkIdx(atkClass, 1) >= 0 Then
+                ' 手持ちの技の探索。フラグが1の最初のもの
+                For idx = .lower To .upper
+                    If self.attacks(idx).flag = 1 Then atkIdx(atkClass, 0) = idx: Exit For
+                Next
+                '   目標に仮設定した先頭の技のフラグが2でないなら、目標技はない
+                If self.attacks(atkIdx(atkClass, 1)).flag <> 2 Then
+                    '   予測PLがないか、PLと同じなら予測数値はなし
+                    If prPL < 1 Or self.PL = prPL Then
+                        atkIdx(atkClass, 1) = -1
+                    Else    '   予測PLでわざの数値をだす
+                        'ときにゲージ1
+                        atkIdx(atkClass, 1) = atkIdx(atkClass, 0)
+                    End If
+                End If
+            End If
+        End With
+    Next
+    getAtkIndex = atkIdx
+End Function
+
+'   設定する列タイトルの配列
+Private Function getSettingColumns()
+            '   現在・通常
+            '   現在・ゲージ1
+            '   現在・ゲージ2
+            '   予測・通常
+            '   予測・ゲージ
+            '   予測 ・cDPS
+    getSettingColumns = Array( _
+        Array( _
+            Array("", IND_GymNormalAtkDamage, IND_GymNormalAtkTDPS), _
+            Array("", IND_MtcNormalAtkDamage, IND_MtcNormalAtkTDPS) _
+        ), Array( _
+            Array("", IND_GymSpecialAtk1Damage, IND_GymSpecialAtk1TDPS, IND_GymSpecialAtk1CDPS), _
+            Array("", IND_MtcSpecialAtk1Damage, IND_MtcSpecialAtk1CDPS) _
+        ), Array( _
+            Array("", IND_GymSpecialAtk2Damage, IND_GymSpecialAtk2TDPS, IND_GymSpecialAtk2CDPS), _
+            Array("", IND_MtcSpecialAtk2Damage, IND_MtcSpecialAtk2CDPS) _
+        ), Array( _
+            Array(IND_prGymNormalAtkName, IND_prGymNormalAtkDamage, IND_prGymNormalAtkTDPS), _
+            Array(IND_prMtcNormalAtkName, IND_prMtcNormalAtkDamage, IND_prMtcNormalAtkTDPS) _
+        ), Array( _
+            Array(IND_prGymSpecialAtkName, IND_prGymSpecialAtkDamage, IND_prGymSpecialAtkTDPS), _
+            Array(IND_prMtcSpecialAtkName, IND_prMtcSpecialAtkDamage) _
+        ), Array( _
+            Array(IND_prGymCDPS, IND_prGymCDpsNormalAtkName, IND_prGymCDpsSpecialAtkName), _
+            Array(IND_prMtcCDPS, IND_prMtcCDpsNormalAtkName, IND_prMtcCDpsSpecialAtkName) _
+    ))
+End Function
+
+'   個体テーブルの調整。色を付ける
+Sub alignIndividualTable()
+    Call doMacro(msgstr(msgSetColorToTypesAndAttcksOnTheSheet, name))
+    Call setTypeColorsOnTableColumns(shIndividual, Array(IND_Type1, IND_Type2))
+    Call setTypeColorsOnTableColumns(shIndividual, _
+                Array(IND_NormalAtk, IND_TargetNormalAtk), C_NormalAttack)
+    Call setTypeColorsOnTableColumns(shIndividual, _
+                Array(IND_SpecialAtk1, IND_SpecialAtk2, IND_TargetSpecialAtk), C_SpecialAttack)
+    Call doMacro
+End Sub
+
+Sub calcAllIndividualTable()
+    Dim row As Long
+    Call doMacro(msgCalculatingIndividualSheet)
+    Calculate
+    With ListObjects(1).DataBodyRange
+        For row = 1 To .rows.count
+            Call setAtkParams(.cells(row, 1), True)
+        Next
+    End With
+    Call doMacro
+End Sub
+
+'   番号の再計算
+Sub calcMonNumber()
+    Dim row, col As Long
+    Dim species As String
+    col = getColumnIndex(IND_Number, ListObjects(1))
+    With shIndividual.ListObjects(1)
+        For row = 1 To .DataBodyRange.rows.count
+            species = .ListColumns(IND_Species).DataBodyRange(row, 1).Text
+            .DataBodyRange.cells(row, col).Value = getSpcAttr(species, SPEC_Number)
+        Next
+    End With
+End Sub
+
+'   エクスポート
+Sub export()
+    Dim fn As String
+    fn = fileDialog("Text,*.txt", True, "PGInd")
+    If fn = "" Then Exit Sub
+    Call doMacro(msgExporting)
+    With ListObjects(1)
+        Call saveCsv(fn, getInputRange())
+    End With
+    Call doMacro
+End Sub
+
+'   表中のユーザー入力範囲
+Private Function getInputRange() As Range
+    Dim col As Long
+    Dim datar As Range
+    With ListObjects(1)
+        col = .ListColumns(IND_fixPL).DataBodyRange.column
+        With .DataBodyRange
+            Set datar = Range(.cells(1, 1), .cells(.rows.count, col))
+        End With
+        Set getInputRange = Union(datar, _
+                    .ListColumns(IND_TargetPL).DataBodyRange, _
+                    .ListColumns(IND_TargetNormalAtk).DataBodyRange, _
+                    .ListColumns(IND_TargetSpecialAtk).DataBodyRange)
+    End With
+End Function
+
+'   インポート
+Sub import()
+    Dim fn As String
+    fn = fileDialog("Text,*.txt")
+    If fn = "" Then Exit Sub
+    Call doMacro(msgImporting)
+    Call dspProgress(msgImporting, 4)
+    Call ClearData
+    Call dspProgress
+    Call loadCsv(fn, ListObjects(1).DataBodyRange.cells(1, 1))
+    Call dspProgress(msgAligningIndividualSheet)
+    Call alignIndividualTable
+    Call dspProgress(msgCalculatingIndividualSheet)
+    Calculate
+    Call dspProgress(msgCalculatingIndividualSheet)
+    Call calcAllIndividualTable
+    Call dspProgress("", 0)
+    Call doMacro
+End Sub
+
+'   データクリア（一行目は残す）
+Sub ClearData()
+    Dim i As Long
+    Dim rng As Range
+    '   2行目以降を消す
+    With ListObjects(1).DataBodyRange
+        If .rows.count > 2 Then
+            Range(.cells(2, 1), .cells(.rows.count, .columns.count)).Delete
+        End If
+    End With
+    Set rng = getInputRange()
+    For i = 1 To rng.Areas.count
+        rng.Areas(i).rows(1).ClearContents
+    Next
+    '   わざの数値の表示関数。クリアする。
+    Call setAtkParams(ListObjects(1).DataBodyRange.cells(1, 1), True)
+End Sub
+
+'   PLの確認
+Public Function checkPL()
+    Dim cols, cel As Variant
+    Dim row As Long
+    Dim names As String
+    cols = getColumnIndexes(ListObjects(1), Array(IND_Nickname, IND_PL))
+    For Each cel In ListObjects(1).ListColumns(IND_PL).DataBodyRange
+        If cel.Value = 0 Then
+            If names <> "" Then names = names & ", "
+            names = names & cel.Offset(0, cols(0) - cols(1)).Text
+        End If
+    Next
+    checkPL = True
+    If names <> "" Then
+        MsgBox msgPLis0 & vbCrLf & names
+        checkPL = False
+    End If
+End Function
+
+

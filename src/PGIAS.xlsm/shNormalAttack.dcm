@@ -1,0 +1,25 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shNormalAttack"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+'   リセットボタン
+Private Sub btnResetSpecies_Click()
+    doMacro msgResetSelectedAttack
+    Call deselectSpecies
+    Call doMacro
+End Sub
+
+'   表の調整。色を付ける
+Sub alignNormalAtkTable()
+    Call doMacro(msgstr(msgSetColorToTypesAndAttcksOnTheSheet, name))
+    Call setTypeColorsOnTableColumns(shNormalAttack, Array(ATK_Type))
+    Call setTypeColorsOnTableColumns(shNormalAttack, Array(ATK_Name), 0)
+    Call doMacro
+End Sub
+

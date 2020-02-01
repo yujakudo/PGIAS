@@ -1,0 +1,48 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shGymEffective"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+
+'   計算するボタン
+Private Sub btnCalc_Click()
+    If onCalcRankingClick(shGymEffective, chkAll.Value, GE_R_Settngs, C_IdGym) Then
+        chkAll.Value = False
+    End If
+End Sub
+
+'   クリアボタン
+Private Sub btnClear_Click()
+    If onRemoveRankingClick(shGymEffective, chkAll.Value, False) Then
+        chkAll.Value = False
+    End If
+End Sub
+
+'   削除ボタン
+Private Sub btnRemove_Click()
+    If onRemoveRankingClick(shGymEffective, chkAll.Value, True) Then
+        chkAll.Value = False
+    End If
+End Sub
+
+'   全てダミーに設定ボタン
+Private Sub btnSetAllWildCards_Click()
+    Call setWildCardAll(shGymEffective, GE_R_Settngs)
+End Sub
+
+'   セルの選択
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+    Call onRankingSelectionChange(Target)
+End Sub
+
+'   セル値の変更
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Call onRankingSheetChange(Target, GE_R_Settngs)
+End Sub
+
+

@@ -1,0 +1,44 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shLicenseAgreement"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+'   同意のチェックが変わった
+Private Sub chkAgree_Click()
+    Dim i As Long
+    Dim prev As Boolean
+    prev = Application.ScreenUpdating
+    Application.ScreenUpdating = False
+    For i = 1 To Worksheets.count
+        Worksheets(i).Visible = chkAgree.Value Or isOpenSheet(i)
+    Next
+    Application.ScreenUpdating = prev
+End Sub
+
+'   オープンにするシートか
+Private Function isOpenSheet(idx As Long) As Boolean
+    Dim sh As Variant
+    Dim i As Long
+    isOpenSheet = False
+    
+    For Each sh In Array(shGuid, shLicenseAgreement, shInfluence, _
+                        shCpm, shMaximun, shClassifiedByType)
+        If sh Is Worksheets(idx) Then
+            isOpenSheet = True
+            Exit Function
+        End If
+    Next
+End Function
+
+'   利用許諾契約のリセット
+Public Sub ResetLicenseAgreement()
+    Dim i As Long
+    chkAgree.Value = False
+    Call chkAgree_Click
+End Sub
+
