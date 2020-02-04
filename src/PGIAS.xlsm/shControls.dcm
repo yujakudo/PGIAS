@@ -195,7 +195,10 @@ Private Function margeAttacks(ByVal cel As Range, ByVal newVal As String, _
     Dim atks, newAtks, item As Variant
     Dim lim, idx As Integer
     Dim testStr, stmp, slog As String
-    If newVal = "" Then Exit Function
+    If newVal = "" Then
+        margeAttacks = "-"
+        Exit Function
+    End If
     atks = Split(cel.Text, ",")
     lim = UBound(atks)
     newAtks = Split(newVal, ",")
@@ -222,7 +225,7 @@ Private Function margeAttacks(ByVal cel As Range, ByVal newVal As String, _
     If slog <> "" Then
         margeAttacks = "Added " & slog
     Else
-        margeAttacks = "no new item"
+        margeAttacks = "-"
     End If
 End Function
 

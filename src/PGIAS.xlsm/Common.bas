@@ -417,44 +417,36 @@ Public Function margeCsv(ByVal fh As Variant, ByVal cell As Range, _
     Dim i, keycol, keyidx As Long
     Dim colHead, words, oldVal, newVal As Variant
     Dim line, log, diff, slog As String
-    Dim tcel As Range
+    Dim keyRng, bottom, cel As Range
     
     If Not readHeader(head, cell, fh, fileName, colHead) Then
         Exit Function
     End If
     '   キー列タイトルの列インデックス（0から）とデータインデックス
-    keycol = getColumnIndex(key, cell) - head.column
     For i = 0 To UBound(colHead)
-        If head.cells(1, i + 1).Value = key Then
+        If head.cells(1, colHead(i)).Value = key Then
+            keycol = colHead(i) - 1
             keyidx = i
             Exit For
         End If
     Next
+    Set bottom = cell.Offset(0, keycol).End(xlDown)
+    Set keyRng = Range(cell.Offset(0, keycol), bottom)
     
     Do Until EOF(fh)
         Line Input #fh, line
         If line = "" Then Exit Do
         words = splitLine(line)
-        oldVal = cell.Offset(0, keycol).Value
-        '   キーが異なる場合、キー列を先読みして一致をさがす。
-        If oldVal <> words(keyidx) Then
-            Set tcel = cell.Offset(1, keycol)
-            Do While tcel.Value <> ""
-                If tcel.Value = words(keyidx) Then
-                    Set cell = tcel.Offset(0, -keycol)
-                    oldVal = cell.Offset(0, keycol).Value
-                    Exit Do
-                End If
-                Set tcel = tcel.Offset(1, 0)
-            Loop
-        End If
-        If oldVal <> words(keyidx) Then
+        Set cel = keyRng.Find(What:=words(keyidx), After:=bottom, LookAt:=xlWhole)
+        If cel Is Nothing Then
             '   新規キー値。行を挿入して書き込み
+            Set bottom = bottom.Offset(1, 0)
+            Set keyRng = Range(keyRng.cells(1, 1), bottom)
+            Set cel = bottom.Offset(0, -keycol)
             If Not isTest Then
-                Range(cell, cell.Offset(0, head.columns.count - 1)).Insert (xlShiftDown)
                 For i = 0 To UBound(words)
-                    If colHead(i) And Not isTest Then
-                        cell.Offset(0, colHead(i) - 1).Value = words(i)
+                    If colHead(i) Then
+                        cel.Offset(0, colHead(i) - 1).Value = words(i)
                     End If
                 Next
             End If
@@ -462,23 +454,26 @@ Public Function margeCsv(ByVal fh As Variant, ByVal cell As Range, _
         Else
             '   既存キー値。各データを比較し、異なる場合はコールバック
             '   コールバック先で上書きするかも
+            Set cel = cel.Offset(0, -keycol)
             diff = ""
             For i = 0 To UBound(words)
                 If colHead(i) Then
-                    oldVal = cell.Offset(0, colHead(i) - 1).Value
+                    oldVal = cel.Offset(0, colHead(i) - 1).Value
                     If IsNumeric(words(i)) Then newVal = val(words(i)) Else newVal = words(i)
                     If oldVal <> newVal Then
                         slog = ""
                         If IsArray(callback) Then
                             slog = CallByName(callback(0), callback(1), VbMethod, _
-                                Array(cell.Offset(0, colHead(i) - 1), newVal, callback(2)))
+                                Array(cel.Offset(0, colHead(i) - 1), newVal, callback(2)))
                         End If
                         If slog = "" Then
                             slog = oldVal & "->" & newVal
                         End If
-                        If diff <> "" Then diff = diff & ","
-                        diff = diff & head.cells(1, colHead(i)).Text _
-                                & "(" & slog & ")"
+                        If slog <> "-" Then
+                            If diff <> "" Then diff = diff & ","
+                            diff = diff & head.cells(1, colHead(i)).Text _
+                                    & "(" & slog & ")"
+                        End If
                     End If
                 End If
             Next
@@ -487,7 +482,6 @@ Public Function margeCsv(ByVal fh As Variant, ByVal cell As Range, _
                         & """ " & diff & vbCrLf
             End If
         End If
-        Set cell = cell.Offset(1, 0)
     Loop
     If fileName <> "" Then
         Close #fh
