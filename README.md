@@ -12,5 +12,5 @@ See the license agreement sheet in the file for more details.
 ## How to use
 See [here](http://www.yujakudo.com/blogs/miscellany/entertainment/pgias1/).
 
-# Environment
+## Environment
 The file is developed and verified on Windows 10 and Excel 2013.
