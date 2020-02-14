@@ -132,3 +132,29 @@ End Function
 Private Sub indent(ByVal fh As Integer, ByVal num As Integer)
     Print #fh, String(num, 9);
 End Sub
+
+Private Sub btnUp_Click()
+    Call nextSection(-1)
+End Sub
+
+Private Sub btnDown_Click()
+    Call nextSection(1)
+End Sub
+
+Private Sub nextSection(ByVal dir As Integer)
+    Dim cel, top As Range
+    Dim upper, lower As Long
+    
+    lower = 2
+    upper = cells(rows.count, 1).End(xlUp).row
+    Set cel = cells(Selection.row, 1)
+    If cel.row < lower Then Set cel = cells(lower, 1)
+    If cel.row > upper Then Set cel = cells(upper, 1)
+    Do
+        Set cel = cel.Offset(dir, 0)
+        If cel.row > 1 Then Set top = cel.Offset(-1, 0) Else Set top = cel
+        ActiveWindow.ScrollRow = top.row
+        Application.Goto cel
+    Loop While lower < cel.row And cel.row < upper And cel.Text <> "Å°" And cel.Text <> "Åõ"
+End Sub
+

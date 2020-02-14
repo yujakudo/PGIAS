@@ -56,7 +56,7 @@ End Sub
 Private Sub MakeADataSet(ByVal sh As Worksheet, ByVal idx As Integer, _
                     Optional ByVal isPredict As Boolean = True)
     Dim rnkCols, neCols, indCols, rCol As Variant
-    Dim rRow, i As Long
+    Dim rrow, i As Long
     Dim headCel As Range
     Dim wcel As Range
     Dim settings As Object
@@ -80,9 +80,9 @@ Private Sub MakeADataSet(ByVal sh As Worksheet, ByVal idx As Integer, _
     Set wcel = headCel.Offset(1, 0)
     With sh.ListObjects(1).DataBodyRange
         '   ジムまたは対戦ランクのループ
-        For rRow = 1 To .rows.count
+        For rrow = 1 To .rows.count
             For Each rCol In rnkCols    '   基本ランクと天候差分の名前の列
-                With .cells(rRow, rCol)
+                With .cells(rrow, rCol)
                     rnk = .Offset(0, -1).Value  '   ランク。名前の直前に決め打ち
                     '   名前があり、かつ（下限がないか、ランクが下限以内）
                     If .Text <> "" And (lowLim = 0 Or rnk <= lowLim) Then

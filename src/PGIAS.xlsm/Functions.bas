@@ -1,5 +1,20 @@
 Attribute VB_Name = "Functions"
+
+
 Option Explicit
+
+'   CPM算出係数
+Private Const k01 As Double = 0.018852250938
+Private Const k00 As Double = -0.010016250938
+Private Const k11 As Double = 0.01783805135
+Private Const k10 As Double = 1.25744942000031E-04
+Private Const k21 As Double = 0.017849811806
+Private Const k20 As Double = -1.09464177999993E-04
+Private Const k31 As Double = 0.00891892158
+Private Const k30 As Double = 0.267817242602
+
+'   CPM算出係数の配列
+Dim CPMK As Variant
 
 '   通常わざ、ゲージわざの文字の配列
 Public Function atkClassArray() As Variant
@@ -281,40 +296,84 @@ End Function
 
 '   PLの推定、種族名とHPより(推定値の一番小さいもの)
 Public Function getPL( _
-            ByVal species As String, ByVal CP As Long, ByVal HP As Long, _
+            ByVal species As String, ByVal CP As Long, ByVal hp As Long, _
             ByVal iatk As Long, ByVal idef As Long, ByVal ihp As Long) As Double
-    Dim thp, cpg, min, max, ref, PL, cpm, lPL, uPL As Double
+    Dim thp, cpg, min, max, ref, PL, CPM, lPL, uPL As Double
     Dim row As Long
     Dim attrs As Variant
-    If species = "" Or CP = 0 Or HP = 0 Then Exit Function
+    If species = "" Or CP = 0 Or hp = 0 Then Exit Function
     attrs = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
     thp = ihp + attrs(2)
     cpg = (iatk + attrs(0)) * Sqr(idef + attrs(1)) * Sqr(thp) / 10
-    min = HP / thp: ref = Sqr(CP / cpg)
+    min = hp / thp: ref = Sqr(CP / cpg)
     If min < ref Then min = ref
-    max = (HP + 1) / thp: ref = Sqr((CP + 1) / cpg)
+    max = (hp + 1) / thp: ref = Sqr((CP + 1) / cpg)
     If max > ref Then max = ref
     With shCpm.ListObjects(1)
         On Error GoTo Err
         row = WorksheetFunction.Match(min, .ListColumns("CPM").DataBodyRange, -1)
         getPL = .ListColumns("PL").DataBodyRange.cells(row, 1)
         row = WorksheetFunction.Match(max, .ListColumns("CPM").DataBodyRange, -1)
+        On Error GoTo 0
         '上限のチェック
         uPL = .ListColumns("PL").DataBodyRange.cells(row, 1)
         If getPL > uPL Then getPL = 0
     End With
     Exit Function
-'    With Range("CPM表")
-'        For row = 1 To .Rows.Count
-'            cpm = .cells(row, 2).Value
-'            If min <= cpm And cpm < max Then
-'                getPL = .cells(row, 1).Value
-'                Exit Function
-'            End If
-'        Next
-'    End With
 Err:
     getPL = 0
+End Function
+
+'   目標PLの取得(下のgetPLbyCPに移行)
+Public Function getTargetPL( _
+            ByVal species As String, ByVal tCP As Long, _
+            ByVal iatk As Long, ByVal idef As Long, ByVal ihp As Long) As Double
+    Dim cpg, tcpm, PL, CPM, CP As Double
+    Dim row As Long
+    Dim attrs As Variant
+    If species = "" Or tCP = 0 Then Exit Function
+    attrs = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
+    cpg = (iatk + attrs(0)) * Sqr(idef + attrs(1)) * Sqr(ihp + attrs(2)) / 10
+    tcpm = Sqr((tCP + 1) / cpg)
+    With shCpm.ListObjects(1)
+        On Error GoTo Proc0
+        row = WorksheetFunction.Match(tcpm, .ListColumns("CPM").DataBodyRange, -1)
+        GoTo Proc1
+Proc0:
+        row = 1
+Proc1:
+        On Error GoTo 0
+        row = row - 1
+        Do
+            row = row + 1
+            CPM = .ListColumns("CPM").DataBodyRange.cells(row, 1)
+            CP = WorksheetFunction.Floor(cpg * CPM * CPM, 1)
+        Loop While CP > tCP
+        getTargetPL = .ListColumns("PL").DataBodyRange.cells(row, 1)
+    End With
+    Exit Function
+Err:
+    getTargetPL = 0
+End Function
+
+'   目標PLの取得
+'   atk, def,hpは現在のPower、PLは現在のPL
+'   種族と個体値から算出版も作るべきか？
+Public Function getPLbyCP(ByVal tCP As Long, ByVal PL As Double, _
+            ByVal atk As Double, _
+            ByVal def As Double, _
+            ByVal hp As Double) As Double
+    Dim cpg, CPM, CPMc, CP, tPL As Double
+    Dim attrs As Variant
+    If tCP = 0 Or PL = 0 Then Exit Function
+    CPMc = getCPM(PL)
+    cpg = atk * Sqr(def) * Sqr(hp) / CPMc ^ 2 / 10
+    CPM = Sqr((tCP + 1) / cpg)
+    tPL = getPLbyCPM(CPM, True)
+    If getCPM(tPL) >= CPM Then tPL = tPL - 0.5
+    If tPL < 1 Then tPL = 1
+    If tPL > 40 Then tPL = 40
+    getPLbyCP = tPL
 End Function
 
 '空白チェック
@@ -347,28 +406,28 @@ Public Function getCP(ByVal species As String, _
                         Optional ByVal indDEF As Long = 15, _
                         Optional ByVal indHP As Long = 15) As Long
     Dim spec As Object
-    Dim cpm As Double
+    Dim CPM As Double
     If species = "" Then Exit Function
     Set spec = getSpcAttrs(species)
-    cpm = getCPM(PL)
+    CPM = getCPM(PL)
     getCP = Fix(((indATK + spec("ATK")) * Sqr(indDEF + spec("DEF")) _
-                * Sqr(indHP + spec("HP")) * cpm ^ 2) / 10)
+                * Sqr(indHP + spec("HP")) * CPM ^ 2) / 10)
     
 End Function
 
 Public Function getCPbyHP(ByVal species As String, _
-                        ByVal HP As Double, _
+                        ByVal hp As Double, _
                         Optional ByVal PL As Double = 40, _
                         Optional ByVal indATK As Long = 15, _
                         Optional ByVal indDEF As Long = 15) As Variant
     Dim spec As Object
-    Dim cpm, CP, ihp As Double
+    Dim CPM, CP, ihp As Double
     If species = "" Then Exit Function
     Set spec = getSpcAttrs(species)
-    cpm = getCPM(PL)
+    CPM = getCPM(PL)
     CP = Fix(((indATK + spec("ATK")) * Sqr(indDEF + spec("DEF")) _
-                * Sqr(HP / cpm) * cpm ^ 2) / 10)
-    ihp = HP / cpm - spec("HP")
+                * Sqr(hp / CPM) * CPM ^ 2) / 10)
+    ihp = hp / CPM - spec("HP")
     getCPbyHP = Array(CP, Int(ihp))
 End Function
 
@@ -379,22 +438,52 @@ Public Function getHPbyCP(ByVal species As String, _
                         Optional ByVal indATK As Long = 15, _
                         Optional ByVal indDEF As Long = 15) As Variant
     Dim spec As Object
-    Dim cpm, HP, ihp As Double
+    Dim CPM, hp, ihp As Double
     If species = "" Then Exit Function
     Set spec = getSpcAttrs(species)
-    cpm = getCPM(PL)
-    HP = 100 * CP ^ 2 / (indATK + spec("ATK")) ^ 2 / (indDEF + spec("DEF")) / cpm ^ 3
-    ihp = HP / cpm - spec("HP")
-    getHPbyCP = Array(Int(HP), Int(ihp))
+    CPM = getCPM(PL)
+    hp = 100 * CP ^ 2 / (indATK + spec("ATK")) ^ 2 / (indDEF + spec("DEF")) / CPM ^ 3
+    ihp = hp / CPM - spec("HP")
+    getHPbyCP = Array(Int(hp), Int(ihp))
 End Function
 
                     
 '   CMPの取得
 Public Function getCPM(ByVal PL As Double) As Double
+    Dim i As Integer
     If PL = 0 Then Exit Function
-    getCPM = WorksheetFunction.VLookup(PL, _
-                shCpm.ListObjects(1).DataBodyRange, 2, False)
+    If Not IsArray(CPMK) Then Call makeCPMKcache
+    i = Int(PL / 10)
+    If i > 3 Then i = 3
+    getCPM = Sqr(CPMK(i)(1) * PL + CPMK(i)(0))
+'    getCPM = WorksheetFunction.VLookup(PL, _
+'                shCpm.ListObjects(1).DataBodyRange, 2, False)
 End Function
+
+Public Function getPLbyCPM(ByVal CPM As Double, _
+                Optional align As Boolean = True) As Double
+    Dim i As Integer
+    If CPM = 0 Then Exit Function
+    If Not IsArray(CPMK) Then Call makeCPMKcache
+    If CPM < 0.422500009990532 Then
+        i = 0
+    ElseIf CPM < 0.597400009994978 Then
+        i = 1
+    ElseIf CPM < 0.731700000001367 Then
+        i = 2
+    Else
+        i = 3
+    End If
+    getPLbyCPM = (CPM ^ 2 - CPMK(i)(0)) / CPMK(i)(1)
+    If align Then
+        getPLbyCPM = Int(getPLbyCPM * 2 + 0.5) / 2
+    End If
+End Function
+
+Private Sub makeCPMKcache()
+    CPMK = Array(Array(k00, k01), Array(k10, k11), _
+                Array(k20, k21), Array(k30, k31))
+End Sub
 
 '   攻撃力、防御力、HPの計算
 Public Function getPower(ByVal species As String, ByVal attr As String, ByVal ind As Long, ByVal PL As Double) As Double

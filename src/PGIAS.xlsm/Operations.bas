@@ -30,8 +30,10 @@ End Sub
 
 '   í‘°–¼‚Ì—\‘ª•ÏŠ·Œó•â‚Ì“ü—Í‹K‘¥İ’è
 Public Function speciesExpectation(ByVal Target As Range) As Boolean
-    Dim txt, lst, fcand As String
+    Dim txt As String
     Dim rng, first, cell As Range
+    Dim cand(), stmp As String
+    Dim clim, cnum, i As Integer
     
     speciesExpectation = False
     txt = StrConv(Target.Text, vbKatakana)
@@ -39,21 +41,34 @@ Public Function speciesExpectation(ByVal Target As Range) As Boolean
     Set first = rng.Find(txt, LookAt:=xlPart)
     If first Is Nothing Then Exit Function
     Set cell = first
+    cnum = 0
+    clim = 10
+    ReDim cand(clim)
     Do
         If InStr(cell.Text, txt) = 1 Then
-            If lst <> "" Then lst = lst & ","
-            lst = lst & cell.Text
-            If fcand = "" Then fcand = cell.Text
+            If cnum > clim Then
+                clim = clim * 2
+                ReDim Preserve cand(clim)
+            End If
+            cand(cnum) = cell.Text
+            i = cnum - 1
+            cnum = cnum + 1
+            Do While i >= 0
+                If StrComp(cand(i), cand(i + 1), vbTextCompare) <= 0 Then Exit Do
+                stmp = cand(i): cand(i) = cand(i + 1): cand(i + 1) = stmp
+                i = i - 1
+            Loop
         End If
         Set cell = rng.FindNext(cell)
     Loop While cell <> first
-    If fcand = "" Then Exit Function
+    If cnum = 0 Then Exit Function
     '   Å‰‚ÌŒó•â‚Éİ’è
     Call enableEvent(False)
-    Target.Value = fcand
+    Target.Value = cand(0)
     '   •¡”Œó•â‚ª‚ ‚é‚È‚çƒŠƒXƒg‚Éİ’è
-    If fcand <> lst Then
-        Call setInputList(Target, lst)
+    If cnum > 1 Then
+        ReDim Preserve cand(cnum - 1)
+        Call setInputList(Target, Join(cand, ","))
         Target.Select
         SendKeys "%{Down}"
     End If

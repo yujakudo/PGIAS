@@ -37,9 +37,11 @@ End Sub
 '   リリースファイルの作成
 Private Sub ReleaseFile()
     Dim vers As Variant
-    Dim fn, ver, branch, dir As String
+    Dim fn(1), ver, branch, dir As String
     Dim settings As Object
+    Dim i As Integer
     
+    Call a_resetDoMacro
     With shVersionHistory.ListObjects(1).DataBodyRange
         vers = getRowValues(.cells(1, 1), Array(VH_Branch, VH_Version))
     End With
@@ -54,10 +56,13 @@ Private Sub ReleaseFile()
     If Not (left(dir, 1) = "/" Or left(dir, 1) = "\" Or left(dir, 2) = ":") Then
         dir = ThisWorkbook.Path & "\" & dir
     End If
-    fn = dir & "\" & settings(GS_FileName) & vers(0) & vers(1) & ".xlsm"
+    fn(0) = dir & "\" & settings(GS_FileName) & vers(0) & vers(1) & ".xlsm"
+    fn(1) = dir & "\" & settings(GS_FileName) & vers(0) & ".xlsm"
     '   処理の開始
     ActiveWorkbook.Save
     Call shControls.AllClear(False)
-    ActiveWorkbook.SaveAs fileName:=fn, FileFormat:= _
-        xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False
+    For i = 0 To 1
+        ActiveWorkbook.SaveAs fileName:=fn(i), FileFormat:= _
+            xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False
+    Next
 End Sub

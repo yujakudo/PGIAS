@@ -69,6 +69,7 @@ End Type
 Public Type Monster
     nickname As String
     species As String
+    logName As String
     itype(1) As Integer
     PL As Double
     indATK As Integer
@@ -76,8 +77,10 @@ Public Type Monster
     indHP As Integer
     atkPower As Double
     defPower As Double
+    hpPower As Double
     fullHP As Long
     curHP As Double
+    CP As Integer
     attacks() As Attack
     atkIndex(1) As AttackIndex
     given(1) As GivenDamage
@@ -85,6 +88,7 @@ Public Type Monster
     chargeCount As Double
     clock As Double
     mode As Integer
+    phase As Integer
 End Type
 
 '   技の評価値
@@ -99,7 +103,8 @@ End Type
 Public Type CDpsSet
     natk As String
     satk As String
-    cDPS As Double
+    cDps As Double
+    Cycle As Double
 End Type
 
 
@@ -173,22 +178,29 @@ Public Function getCDPS(ByVal mode As Integer, _
         Optional ByVal isAna As Boolean = False) As Double
     Dim self As Monster
     Dim enemy As Monster
+    Dim cDpss As CDpsSet
     Call getMonster(self, species, PL, indATK)
     Call setAttacks(mode, self, natkName, satkName)
     Call getMonster(enemy, enemySpecies, enemyPL, 0, enemyIndDef)
-    getCDPS = calcCDPS(self, enemy, isAna, weather)
+    cDpss = calcCDPS(self, enemy, isAna, weather)
+    getCDPS = cDpss.cDps
 End Function
 
 '   cDPSの算出
 Public Function calcCDPS(ByRef self As Monster, ByRef enemy As Monster, _
                 Optional ByVal isAna As Boolean = False, _
-                Optional ByVal weather As Variant = 0) As Double
+                Optional ByVal weather As Variant = 0) As CDpsSet
     Dim damage, period As Double
     Dim atkIdx As Variant
+    
+    atkIdx = getAttackIndex(self)
+    With self
+        calcCDPS.natk = .attacks(atkIdx(0)).name
+        calcCDPS.satk = .attacks(atkIdx(1)).name
+    End With
     If Not IsNumeric(weather) Then weather = getWeatherIndex(weather)
     Call calcDamages(self, enemy, isAna, weather)
     If calcChargeCount(self) Then
-        atkIdx = getAttackIndex(self)
         With self
             damage = .attacks(atkIdx(0)).damage * self.chargeCount + .attacks(atkIdx(1)).damage
             period = .attacks(atkIdx(0)).idleTime * self.chargeCount + .attacks(atkIdx(1)).idleTime
@@ -196,7 +208,8 @@ Public Function calcCDPS(ByRef self As Monster, ByRef enemy As Monster, _
         If period = 0 Then
             Debug.Print "Period is 0 in calcCDPS. " & self.nickname
         End If
-        calcCDPS = damage / period
+        calcCDPS.cDps = damage / period
+        calcCDPS.Cycle = period
     End If
 End Function
 
@@ -214,7 +227,7 @@ Public Function getAtkAna( _
         Optional ByVal enemySpecies As String = "", _
         Optional ByVal enemyPL As Double = 40, _
         Optional ByVal enemyIndDef As Long = 15)
-    Dim atkNames As Variant
+    Dim atkNames, cDps As Variant
     Dim self As Monster
     Dim enemy As Monster
     Dim i, j, atkClass, ni, si As Integer
@@ -239,11 +252,9 @@ Public Function getAtkAna( _
             self.atkIndex(0).selected = ni
             For si = .atkIndex(1).lower To .atkIndex(1).upper
                 self.atkIndex(1).selected = si
-                cDpss(i).natk = .attacks(ni).name
-                cDpss(i).satk = .attacks(si).name
-                cDpss(i).cDPS = calcCDPS(self, enemy, True, weather)
+                cDpss(i) = calcCDPS(self, enemy, True, weather)
                 For j = i - 1 To 0 Step -1
-                    If cDpss(j).cDPS < cDpss(j + 1).cDPS Then
+                    If cDpss(j).cDps < cDpss(j + 1).cDps Then
                         tmp = cDpss(j): cDpss(j) = cDpss(j + 1): cDpss(j + 1) = tmp
                     End If
                 Next
@@ -295,61 +306,120 @@ Private Function getAtkParam(ByRef self As Monster, ByRef enemy As Monster, _
     If atkClass = C_IdNormalAtk Then getAtkParam.chargeEfc = vals(1)
 End Function
 
-'   KTRの計算
-'   返り値の配列の要素は、0:KTR, 1:自KT, 2:敵KT
-Private Function getKTR(ByRef sbjMon As Monster, ByRef objMon As Monster, _
+'   戦闘シミュレーション
+'   返り値の配列の要素は、0:KTR, 1:自KT, 2:敵KT, 3:ログ
+Private Function simBattle(ByRef sbjMon As Monster, ByRef objMon As Monster, _
         Optional ByVal weather As Integer = 0, _
-        Optional ByVal atkDelay As Double = 0) As Variant
-    Dim sbjKT, objKT, DPS(2) As Double
+        Optional ByVal needKTR As Boolean = False, _
+        Optional ByVal needLog As Boolean = False) As Variant
+    Dim sbjKT, objKT, DPS(2), rsv As Double
     Dim alive(1), isSbjFirst As Boolean
+    Dim log, subLog As String
     
     sbjMon.clock = 0
-    objMon.clock = atkDelay
+    objMon.clock = 0
     sbjKT = 0: objKT = 0
     alive(0) = True: alive(1) = True
     Call calcDamages(sbjMon, objMon, False, weather)
     Call calcDamages(objMon, sbjMon, False, weather)
     isSbjFirst = sbjMon.atkPower >= objMon.atkPower
+    '   攻撃を決定しておく
+    Call decideAttack(sbjMon)
+    Call decideAttack(objMon)
     '   どちらかが生きている間
-    While alive(0) Or alive(1)
+    Do While alive(0) Or alive(1)
+        If needLog Then
+            log = log & subLog _
+                & monStatusStr(sbjMon) & "  " & monStatusStr(objMon) & vbCrLf
+        End If
         If sbjMon.clock < objMon.clock Or (isSbjFirst And sbjMon.clock = objMon.clock) Then
-            Call progressBattle(sbjMon, objMon, weather)
+            subLog = hitAttack(sbjMon, objMon, weather) & vbCrLf
             '   相手のHPが0以下になったらKTを記録
             If alive(1) And objMon.curHP <= 0 Then
                 sbjKT = sbjMon.clock
                 alive(1) = False
+                If Not needKTR Then Exit Do
             End If
+            Call decideAttack(sbjMon)
         Else
-            Call progressBattle(objMon, sbjMon, weather)
+            subLog = hitAttack(objMon, sbjMon, weather) & vbCrLf
             If alive(0) And sbjMon.curHP <= 0 Then
                 objKT = objMon.clock
                 alive(0) = False
+                If Not needKTR Then Exit Do
             End If
+            Call decideAttack(objMon)
         End If
-    Wend
-    getKTR = Array(sbjKT / objKT, sbjKT, objKT)
+    Loop
+    If needLog Then
+        log = log & subLog _
+            & monStatusStr(sbjMon) & "  " & monStatusStr(objMon) & vbCrLf
+    End If
+    If needKTR Then
+        simBattle = Array(sbjKT / objKT, sbjKT, objKT, log)
+    Else
+        simBattle = Array(0, sbjKT, objKT, log)
+    End If
 End Function
 
-'   一ターンバトルを進める
-Private Sub progressBattle(ByRef offence As Monster, ByRef deffence As Monster, _
-        Optional ByVal weather As Integer = 0)
-    Dim charge, damage, idleTime As Double
-    Dim atkClass As Integer
-    With offence.attacks(offence.atkIndex(1).selected)
-        '   ゲージが満ちていなければ、通常技を打つ
-        If .special.curVol < .special.rsvVol Then
-            With offence.attacks(offence.atkIndex(0).selected)
-                damage = .damage
-                idleTime = .idleTime
-                charge = .normal.charge
-                atkClass = 0
+'   状態の文字列の作成
+Private Function monStatusStr(ByRef mon As Monster) As String
+    Dim rsv As Double
+    With mon
+        rsv = .attacks(.atkIndex(1).selected).special.curVol
+        monStatusStr = msgstr(msgMonStatus, Array(.logName, .curHP, rsv))
+    End With
+End Function
+
+'   次の攻撃の決定
+Private Sub decideAttack(ByRef offence As Monster)
+    Dim idleTime As Double
+    Dim atkIdx As Integer
+    
+    atkIdx = offence.atkIndex(1).selected
+    With offence.attacks(atkIdx)    '   ゲージ技
+        '   ゲージが満ちていなければ、通常技を開始
+        If .special.curVol < .special.rsvVol Then atkIdx = offence.atkIndex(0).selected
+    End With
+    '   攻撃準備フェイズ
+    With offence.attacks(atkIdx)
+        offence.phase = .class + 1
+        idleTime = .idleTime
+        '   クロック
+        offence.clock = offence.clock + idleTime
+        With offence.given(.class)
+            .time = .time + idleTime
+        End With
+    End With
+End Sub
+
+'   攻撃
+Private Function hitAttack(ByRef offence As Monster, ByRef deffence As Monster, _
+        Optional ByVal weather As Integer = 0) As String
+    Dim charge, damage As Double
+    Dim name As String
+    Dim atkIdx As Integer
+    
+    atkIdx = offence.atkIndex(offence.phase - 1).selected
+    With offence.attacks(atkIdx)
+        '   ダメージ
+        damage = .damage
+        deffence.curHP = deffence.curHP - damage
+        With offence.given(.class)
+            .damage = .damage + damage
+        End With
+        '   ダメージによる防御側のチャージ
+        With deffence.attacks(deffence.atkIndex(1).selected)
+            .special.curVol = .special.curVol + damage * ChargeByDamage
+        End With
+        If .class = 0 Then  '   通常技
+            '   チャージ
+            charge = .normal.charge
+            With offence.attacks(offence.atkIndex(1).selected)
+                .special.curVol = .special.curVol + charge
             End With
-            .special.curVol = .special.curVol + charge
-        Else    '   ゲージ技を打つ
-            damage = .damage
-            idleTime = .idleTime
-            atkClass = 1
-            '   ジム戦でゲージ数1なら空に
+        Else  '   ゲージ技
+            '   ジム戦でゲージ数1ならゲージを空に
             If offence.mode = C_IdGym And .special.rsvNum = 1 Then
                 .special.curVol = 0
             Else
@@ -362,17 +432,10 @@ Private Sub progressBattle(ByRef offence As Monster, ByRef deffence As Monster, 
                 Call calcDamages(deffence, offence, False, weather)
             End If
         End If
-        deffence.curHP = deffence.curHP - damage
-        offence.clock = offence.clock + idleTime
-        With offence.given(atkClass)
-            .damage = .damage + damage
-            .time = .time + idleTime
-        End With
-        With deffence.attacks(deffence.atkIndex(1).selected)
-            .special.curVol = .special.curVol + damage * ChargeByDamage
-        End With
+        hitAttack = msgstr(msgHitAttack, Array(offence.logName, .name, damage))
     End With
-End Sub
+    offence.phase = 0
+End Function
 
 
 '   通常わざの設定。（damageはセットしない）
@@ -556,6 +619,7 @@ Public Sub resetHpAndEffectTrans(ByRef mon As Monster)
     Dim i, idx As Integer
     '   HPフル
     mon.curHP = mon.fullHP
+    mon.phase = 0
     '   与えたダメージのリセット
     mon.given(0).time = 0
     mon.given(0).damage = 0
@@ -698,10 +762,92 @@ Public Sub getMonster(ByRef mon As Monster, _
         Call clearMonster(mon)
         mon.atkPower = 100
         mon.defPower = 100
+        mon.hpPower = 100
         mon.fullHP = 100
+        mon.curHP = mon.fullHP
         Exit Sub
     End If
     Call clearMonster(mon, "", species, PL, indATK, indDEF, indHP, defHP)
+End Sub
+
+'   パラメータを指定して個体を取得
+Public Sub getMonsterByPower(ByRef mon As Monster, _
+                    Optional ByVal species As String = "", _
+                    Optional ByVal atk As Double = 100, _
+                    Optional ByVal def As Double = 100, _
+                    Optional ByVal hp As Double = 100)
+    Dim attr As Variant
+    Dim CPM As Double
+    Call clearMonster(mon, "", species)
+    mon.atkPower = atk
+    mon.defPower = def
+    mon.hpPower = hp
+    mon.fullHP = Fix(hp)
+    mon.curHP = mon.fullHP
+    If species <> "" Then
+        attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
+        '   PLを減らして、マイナスがない値を見つける
+        For mon.PL = 40 To 1 Step -0.5
+            CPM = getCPM(mon.PL)
+            mon.indATK = atk / CPM - attr(0)
+            mon.indDEF = def / CPM - attr(1)
+            mon.indHP = hp / CPM - attr(2)
+            If mon.indATK >= 0 And mon.indDEF >= 0 And mon.indHP >= 0 Then Exit For
+        Next
+        '   計算不能
+        If mon.PL < 1 Then
+            mon.PL = 0
+            mon.indATK = 0
+            mon.indDEF = 0
+            mon.indHP = 0
+        End If
+        mon.CP = Fix(atk * Sqr(def) * Sqr(hp) / 10)
+    End If
+End Sub
+
+'   パラメータを指定して個体を取得
+Public Sub getMonsterByCpHp(ByRef mon As Monster, _
+                    Optional ByVal species As String = "", _
+                    Optional ByVal CP As Integer = 1000, _
+                    Optional ByVal hp As Integer = 100)
+    Dim attr As Variant
+    Dim CPd, HPd, CPM, ADmax, AD, CPpHP As Double
+    Dim a, b, c, p, q, u, v, ind As Double
+    Call clearMonster(mon, "", species)
+    If species <> "" Then
+        attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
+    Else
+        attr = Array(112, 112, 112)
+    End If
+    CPd = CP + 0.5
+    HPd = hp + 0.5
+    ADmax = (attr(0) + 15) * Sqr(attr(1) + 15)
+    CPpHP = 10 * CPd / Sqr(HPd)
+    '   PLとADの決定
+    CPM = getCPM(40)
+    AD = CPpHP / CPM ^ 1.5 '   AD40
+    If AD >= ADmax Then
+        mon.PL = 40
+    Else
+        For mon.PL = 40 To 1.5 Step -0.5
+            CPM = getCPM(mon.PL - 0.5)
+            AD = CPpHP / CPM ^ 1.5
+            If ADmax < AD Then Exit For
+        Next
+    End If
+    CPM = getCPM(mon.PL)
+    AD = CPpHP / CPM ^ 1.5
+    '   ATK, DEF
+    a = 2 * attr(0) + attr(1): b = attr(0) ^ 2 + 2 * attr(0) * attr(1)
+    c = attr(0) ^ 2 * attr(1) - AD ^ 2
+    p = (b - a ^ 2 / 3) / 3: q = (c + 2 * a ^ 3 / 27 - a * b / 3) / 2
+    u = WorksheetFunction.power(-q + Sqr(q ^ 2 + p ^ 2), 1 / 3)
+    v = WorksheetFunction.power(-q - Sqr(q ^ 2 + p ^ 2), 1 / 3)
+    ind = u + v - a / 3
+    mon.indATK = ind: mon.atkPower = (attr(0) + ind) * CPM
+    mon.indDEF = ind: mon.defPower = (attr(1) + ind) * CPM
+    mon.indHP = HPd / CPM - attr(2): mon.hpPower = HPd
+    mon.CP = CP: mon.fullHP = hp: mon.curHP = hp
 End Sub
 
 '   わざの設定
@@ -720,11 +866,10 @@ End Sub
 
 '   ダミーのモンスター
 Public Function getDummyMonster(ByRef mon As Monster, _
+                ByRef param As Object, _
                 Optional ByVal mode As Integer = 0, _
                 Optional ByVal atkDelay As Double = 0, _
                 Optional ByVal types As Variant = Nothing)
-    Dim param As Object
-    Set param = getSettings(R_DummyParameter)
     Call clearMonster(mon)
     If IsArray(types) Then
         Call types2idx(types)
@@ -793,6 +938,7 @@ Public Sub clearMonster(ByRef mon As Monster, _
     Dim types As Variant
     mon.nickname = nickname
     mon.species = species
+    If nickname <> "" Then mon.logName = nickname Else mon.logName = species
     mon.itype(0) = 0
     mon.itype(1) = 0
     If species <> "" Then
@@ -809,8 +955,11 @@ Public Sub clearMonster(ByRef mon As Monster, _
     mon.curHP = 0
     mon.atkPower = 0
     mon.defPower = 0
+    mon.hpPower = 0
+    mon.CP = 0
     mon.chargeCount = 0
     mon.clock = 0
+    mon.phase = 0
     mon.mode = -1
     mon.atkNum = 0
     mon.atkIndex(0).selected = -1
@@ -826,15 +975,22 @@ End Sub
 Public Sub calcMonPowers(mon As Monster, _
                     Optional ByVal defHP As Integer = 0)
     Dim attrs As Variant
-    Dim cpm As Double
+    Dim CPM As Double
     If mon.species = "" Then Exit Sub
     attrs = getSpcAttrs(mon.species, Array("ATK", "DEF", "HP"))
-    cpm = getCPM(mon.PL)
-    mon.atkPower = (mon.indATK + attrs(0)) * cpm
-    mon.defPower = (mon.indDEF + attrs(1)) * cpm
+    CPM = getCPM(mon.PL)
+    mon.atkPower = (mon.indATK + attrs(0)) * CPM
+    mon.defPower = (mon.indDEF + attrs(1)) * CPM
     mon.fullHP = defHP
-    If defHP = 0 Then mon.fullHP = Fix((mon.indHP + attrs(2)) * cpm)
+    If defHP = 0 Then
+        mon.hpPower = (mon.indHP + attrs(2)) * CPM
+        mon.fullHP = Fix(mon.hpPower)
+    Else
+        mon.fullHP = defHP
+        mon.hpPower = defHP + 0.5
+    End If
     mon.curHP = mon.fullHP
+    mon.CP = Fix(mon.atkPower * Sqr(mon.defPower) * Sqr(mon.hpPower) / 10)
 End Sub
 
 '   ダメージをまとめて計算
@@ -1013,7 +1169,7 @@ Public Function getKtRank(ByVal rankNum As Long, _
         Optional ByVal lowerCP As Long = 0, _
         Optional ByVal prediction As Boolean = False, _
         Optional ByVal weather As Integer = 0, _
-        Optional ByVal atkDelay As Double = 0) As Variant
+        Optional ByVal selfAtkDelay As Double = 0) As Variant
     Dim ktrs, minKtrs, rank(), vtmp As Variant
     Dim cel As Range
     Dim ri, nai, sai As Long
@@ -1036,7 +1192,7 @@ Public Function getKtRank(ByVal rankNum As Long, _
         If (lowerCP > 0 And CP < lowerCP) Or (upperCP > 0 And upperCP < CP) Then GoTo Continue
         '   個体の設定
         Call getIndividual(cel, self, prediction)
-        Call setIndividualAttacks(self, enemy.mode, predict, cel, 0, _
+        Call setIndividualAttacks(self, enemy.mode, predict, cel, selfAtkDelay, _
                                     (enemy.mode = C_IdMtc))
         If self.PL = 0 Or self.atkIndex(0).lower < 0 Or self.atkIndex(1).lower < 0 Then GoTo Continue
         minKtrs = Array(1E+107, 1E+107)
@@ -1050,9 +1206,9 @@ Public Function getKtRank(ByVal rankNum As Long, _
                 If spesifiedEnemyAtk Then
                     Call resetHpAndEffectTrans(self)
                     Call resetHpAndEffectTrans(enemy)
-                    ktrs = getKTR(self, enemy, weather, atkDelay)
+                    ktrs = simBattle(self, enemy, weather, True)
                 Else    '   特定されていないので平均を得る
-                    ktrs = getAveKTR(self, enemy, weather, atkDelay)
+                    ktrs = getAveKTR(self, enemy, weather)
                 End If
                 '   最小をminKtrsに記録
                 If (isKTR And minKtrs(0) > ktrs(0)) _
@@ -1108,8 +1264,7 @@ End Function
 '   0:KRT, 1:自KT, 4:通常わざtDPS, 6:ゲージわざtDPA, 7:cDPS
 Public Function getAveKTR( _
         ByRef self As Monster, ByRef enemy As Monster, _
-        Optional ByVal weather As String = "", _
-        Optional ByVal atkDelay As Double = 0) As Variant
+        Optional ByVal weather As String = "") As Variant
     Dim sumKtr(7) As Variant
     Dim ktrs As Variant
     Dim nai, sai, cnt, i As Long
@@ -1128,7 +1283,7 @@ Public Function getAveKTR( _
                 .atkIndex(1).selected = sai
                 Call resetHpAndEffectTrans(self)
                 Call resetHpAndEffectTrans(enemy)
-                ktrs = getKTR(self, enemy, weather, atkDelay)
+                ktrs = simBattle(self, enemy, weather, True)
                 sumKtr(0) = sumKtr(0) + ktrs(0)
                 sumKtr(1) = sumKtr(1) + ktrs(1)
                 With self

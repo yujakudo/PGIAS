@@ -61,8 +61,8 @@ End Sub
 Private Sub cmdAllUpdate_Click()
     Call shIndivMap.makeMap
     Call doMacro(msgAllRecalc)
-    Call SetAllRanking(shGymEffective, GE_R_Settngs, C_IdGym)
-    Call SetAllRanking(shMatchEffective, ME_R_Settngs, C_IdMtc)
+    Call shGymEffective.calcAll
+'    Call SetAllRanking(shMatchEffective, ME_R_Settngs, C_IdMtc)
     Call doMacro
     Call shNewEntries.makeNewEntries
 End Sub

@@ -9,8 +9,8 @@ Public Const C_IdSpecialAtk As Integer = 1
 
 Public Const C_TYPE As String = "タイプ"
 Public Const C_SpeciesName As String = "種族名"
-Public Const C_NormalAttack = "通常わざ"
-Public Const C_SpecialAttack = "ゲージわざ"
+Public Const C_NormalAttack As String = "通常わざ"
+Public Const C_SpecialAttack As String = "ゲージわざ"
 Public Const C_Self = "自"
 Public Const C_Enemy = "敵"
 Public Const C_Attack = "攻撃"
@@ -47,6 +47,7 @@ Public Const IND_SpecialAtk1 As String = C_SpecialAttack & "1"
 Public Const IND_SpecialAtk2 As String = C_SpecialAttack & "2"
 Public Const IND_fixPL As String = "PL_fix"
 Public Const IND_PL As String = "PL"
+Public Const IND_League As String = "リーグ"
 Public Const IND_AtkPower As String = "攻撃力"
 Public Const IND_DefPower As String = "防御力"
 Public Const IND_HP2 As String = "HP2"
@@ -77,6 +78,7 @@ Public Const IND_prPL As String = "PL_pr"
 Public Const IND_dPL As String = "Δ_PL"
 Public Const IND_Candies As String = "アメ"
 Public Const IND_Sands As String = "星の砂"
+Public Const IND_prLeague As String = "リーグ_pr"
 Public Const IND_prCP As String = "CP_pr"
 Public Const IND_prHP As String = "HP_pr"
 Public Const IND_DeltaHP As String = "Δ_HP"
@@ -233,6 +235,7 @@ Public Const SA1_cDpsRank = "cDPSランク"
 Public Const SA1_CDSP_NormalAtkName = "通常わざ_gnCdps"
 Public Const SA1_CDSP_SpecialAtkName = "ゲージわざ_gsCdps"
 Public Const SA1_CDSP_Value = "cDPS_gCdps"
+Public Const SA1_CDSP_Cycle = "Cyc_gCdps"
 
 
 Public Const SA1_CDST_NormalAtkName = "通常わざ_mnCdps"
@@ -254,14 +257,18 @@ Public Const R_SpeciesMapSpeciesSelect As String = "種族マップ種族選択"
 Public Const R_SpeciesMapSettings As String = "種族マップ設定"
 
 '   ジム・対戦
-Public Const GE_R_Settngs As String = "ジムバトル設定"
+Public Const BE_R_Settngs As String = "設定"
 Public Const ME_R_Settngs As String = "対戦バトル設定"
-Public Const BE_SetAtkDelay As String = "攻撃遅延"
+Public Const BE_SetMode As String = "モード"
+Public Const BE_SetSelfAtkDelay As String = "自攻撃遅延"
+Public Const BE_SetEnemyAtkDelay As String = "敵攻撃遅延"
 Public Const BE_SetRankNum As String = "順位数"
 Public Const BE_SetRankVar As String = "順位付け"
 Public Const BE_SetWithLimit As String = "限定技"
 Public Const BE_DefCpUpper As String = "CP上限デフォルト"
 Public Const BE_DefCpLower As String = "CP下限デフォルト"
+
+Public Const BE_R_DummyEnemy As String = "ダミー"
 
 Public Const BE_Species As String = C_SpeciesName
 Public Const BE_Memo As String = "備考"
@@ -269,11 +276,11 @@ Public Const BE_NormalAttack As String = C_NormalAttack
 Public Const BE_SpecialAttack As String = C_SpecialAttack
 Public Const BE_SpecInput = "PL個体値"
 Public Const BE_PL = "PL"
-Public Const BE_ATK = "個体ATK"
-Public Const BE_Def = "個体DEF"
-Public Const BE_IHP = "個体HP"
-Public Const BE_CP = "CP"
+Public Const BE_ATK = "ATK"
+Public Const BE_DEF = "DEF"
 Public Const BE_HP = "HP"
+Public Const BE_CPHP = "CP/HP"
+'Public Const BE_HP = "HP"
 Public Const BE_UpperCP = "上限"
 Public Const BE_LowerCP = "下限"
 Public Const BE_BaseRank = "天候未設定"
@@ -387,6 +394,10 @@ Public Const msgKeyDoesNotExist As String = "{0}シートの{1}列に「{2}」がありませ
 Public Const msgColumnDoesNotExist As String = "{0}シートに「{1}」という列はありません。"
 Public Const msgNoIdentifier As String = "{0}シートの{1}行{2}列に「{3}」がありません。"
 Public Const msgColumnDoesNotExistOnTable As String = "「{0}」に「{1}」という列はありません。"
+
+Public Const msgHitAttack As String = "{0}:{1}。ダメージ{2}。"
+Public Const msgMonStatus As String = "{0}: HP:{1}, Rsv:{2}"
+
 '   shSpecies
 Public Const msgAttackIsLimited As String = "「{0}」を種族シートに追加します。「{0}」は限定わざですか？" _
                 & vbCrLf & "[はい]=限定わざ、[いいえ]=普通のわざ、[キャンセル]=追加しない"

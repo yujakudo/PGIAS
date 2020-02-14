@@ -245,6 +245,7 @@ Private Sub setDamageAndDPS(ByVal Target As Range, ByVal columns As Variant, _
     Dim col As Variant
     Dim idx As Integer
     Dim colLim As Integer
+    Dim cDpss As CDpsSet
     colLim = UBound(columns)
     If self.PL > 0 And atkIdx >= 0 Then
         Call calcADamage(atkIdx, self, enemy, True)
@@ -260,7 +261,8 @@ Private Sub setDamageAndDPS(ByVal Target As Range, ByVal columns As Variant, _
             End If
             If .class = 1 And idx <= colLim Then
                 self.atkIndex(1).selected = atkIdx
-                getColumn(columns(idx), Target).Value = calcCDPS(self, enemy, True)
+                cDpss = calcCDPS(self, enemy, True)
+                getColumn(columns(idx), Target).Value = cDpss.cDps
                 idx = idx + 1
             End If
         End With
@@ -273,15 +275,18 @@ End Sub
 Private Sub setCDPS(ByVal Target As Range, ByVal columns As Variant, _
                 ByRef self As Monster, ByRef enemy As Monster, _
                 ByVal atkIdx As Integer)
-    Dim maxCDPS, cDPS As Double
+    Dim maxCDPS As Double
     Dim maxAtkIdx(1) As Integer
     Dim colLim As Integer
     Dim cel As Range
+    Dim cDpss As CDpsSet
+    
     colLim = UBound(columns)
     '   インデックスが有効範囲ならcDPSの計算
     If self.PL > 0 And atkIdx > 0 And self.atkIndex(1).lower <= atkIdx And atkIdx <= self.atkIndex(1).upper Then
         self.atkIndex(1).selected = atkIdx
-        getColumn(columns(0), Target).Value = calcCDPS(self, enemy, True)
+        cDpss = calcCDPS(self, enemy, True)
+        getColumn(columns(0), Target).Value = cDpss.cDps
         If colLim >= 1 Then getColumn(columns(1), Target).Value = self.attacks(self.atkIndex(0).selected).name
         If colLim >= 2 Then getColumn(columns(2), Target).Value = self.attacks(self.atkIndex(1).selected).name
     '   0で有効なら最大値を計算
@@ -289,9 +294,9 @@ Private Sub setCDPS(ByVal Target As Range, ByVal columns As Variant, _
         maxAtkIdx(0) = self.atkIndex(0).selected
         For atkIdx = self.atkIndex(1).lower To self.atkIndex(1).upper
             self.atkIndex(1).selected = atkIdx
-            cDPS = calcCDPS(self, enemy, True)
-            If maxCDPS < cDPS Then
-                maxCDPS = cDPS
+            cDpss = calcCDPS(self, enemy, True)
+            If maxCDPS < cDpss.cDps Then
+                maxCDPS = cDpss.cDps
                 maxAtkIdx(1) = atkIdx
             End If
         Next
@@ -509,5 +514,40 @@ Public Function checkPL()
         checkPL = False
     End If
 End Function
+
+'   目標PLの設定(未使用)
+Public Sub setTargetPL(ByVal rng As Range)
+    Dim row, col, tCP As Long
+    Dim cols, attr As Variant
+    Dim rrow(1) As Long
+    With shIndividual.ListObjects(1)
+        If rng Is Nothing Then
+            Set rng = .DataBodyRange
+        Else
+            Set rng = Application.Intersect(rng, .DataBodyRange)
+        End If
+        rrow(0) = rng.row - .DataBodyRange.row + 1
+        rrow(1) = rng.row + rng.rows.count - .DataBodyRange.row
+    End With
+    cols = Array(IND_Species, IND_CP, _
+            IND_indATK, IND_indDEF, IND_indHP)
+    col = getColumnIndex(IND_TargetPL, shIndividual)
+    With shIndividual.ListObjects(1).DataBodyRange
+        For row = rrow(0) To rrow(1)
+            attr = getRowValues(.cells(row, 1), cols)
+            If attr(1) <= 1500 Then
+                tCP = 1500
+            ElseIf attr(1) <= 2500 Then
+                tCP = 2500
+            Else
+                tCP = 0
+            End If
+            If tCP > 0 Then
+                .cells(row, col).Value = _
+                    getTargetPL(attr(0), tCP, attr(2), attr(3), attr(4))
+            End If
+        Next
+    End With
+End Sub
 
 

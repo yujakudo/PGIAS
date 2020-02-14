@@ -164,6 +164,8 @@ Public Function MargeImportBasicData(Optional ByVal overwrite As Boolean = False
         Call shSpecies.alignTableSpecies
         Call shNormalAttack.alignNormalAtkTable
         Call shSpecialAttack.alignSpecialAtkTable
+        Call shClassifiedByType.makeTableClassifiedByType
+        Call shSpeciesAnalysis1.makeTableSpeciesAna1
     End If
     Call margeLog(log, isTest)
     Call doMacro

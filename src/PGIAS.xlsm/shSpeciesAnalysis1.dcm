@@ -166,7 +166,7 @@ End Sub
 Private Sub makeEndurance(Optional ByVal srow As Long = 0)
     Dim row, colATKP, colDEFP, colHP, colCP, colSCP, colDCP, colEND As Long
     Dim species As String
-    Dim HP, def, atk, endur, SCP, DCP As Double
+    Dim hp, def, atk, endur, SCP, DCP As Double
     Dim cels As Variant
     Dim rowr As Variant
     rowr = getRowRange(srow)
@@ -176,16 +176,16 @@ Private Sub makeEndurance(Optional ByVal srow As Long = 0)
     With ListObjects(1).DataBodyRange
         For row = rowr(0) To rowr(1)
             species = .cells(row, 2).Text
-            HP = getPower(species, "HP", 15, 40)
+            hp = getPower(species, "HP", 15, 40)
             def = getPower(species, "DEF", 15, 40)
             atk = getPower(species, "ATK", 15, 40)
             .cells(row, cels(0)).Value = atk
             .cells(row, cels(1)).Value = def
-            .cells(row, cels(2)).Value = HP
-            .cells(row, cels(3)).Value = atk * Sqr(def) * Sqr(HP) / 10
-            .cells(row, cels(4)).Value = (atk * def * HP) ^ (2 / 3) / 10
-            .cells(row, cels(5)).Value = (atk * def ^ 2 * HP ^ 2) ^ (2 / 5) / 10
-            .cells(row, cels(6)).Value = HP / (1000 / def + 1)
+            .cells(row, cels(2)).Value = hp
+            .cells(row, cels(3)).Value = atk * Sqr(def) * Sqr(hp) / 10
+            .cells(row, cels(4)).Value = (atk * def * hp) ^ (2 / 3) / 10
+            .cells(row, cels(5)).Value = (atk * def ^ 2 * hp ^ 2) ^ (2 / 5) / 10
+            .cells(row, cels(6)).Value = hp / (1000 / def + 1)
         Next
     End With
 End Sub
@@ -255,8 +255,9 @@ Private Sub makeAtkAna(Optional ByVal mode As Integer = C_IdGym, _
                 If i >= rnks Then Exit For
                 Call setAtkNames(C_IdNormalAtk, cDpss(i).natk, .cells(row, col))
                 Call setAtkNames(C_IdSpecialAtk, cDpss(i).satk, .cells(row, col + 1))
-                .cells(row, col + 2).Value = cDpss(i).cDPS
-                col = col + 3
+                .cells(row, col + 2).Value = cDpss(i).cDps
+                .cells(row, col + 3).Value = cDpss(i).Cycle
+                col = col + 4
             Next
         Next
     End With
@@ -280,7 +281,7 @@ Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
     hAnaT = Array(SA1_NA_Damage, SA1_NA_Dps, SA1_NA_Eps, _
                 SA1_SA_Damage, SA1_SA_Dps)
     hDcp = Array(SA1_CDSP_NormalAtkName, SA1_CDSP_SpecialAtkName, _
-                SA1_CDSP_Value)
+                SA1_CDSP_Value, SA1_CDSP_Cycle)
     hDcpT = SA1_cDpsRank
     btlTitle = Array(SA1_GymBattleT, SA1_MtcBattleT)
     btlName = Array(SA1_GymBattle, SA1_MtcBattle)
@@ -341,6 +342,9 @@ Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
             Next
         Next
     Next
+    If Not shControls.chkShowSuffix Then
+        Call switchHeaderSuffixes(False)
+    End If
 End Sub
 
 '   É\Å[Ég

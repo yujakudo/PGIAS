@@ -120,7 +120,7 @@ Public Function searchRow(ByVal key As Variant, ByVal column As Variant, _
     End With
     Exit Function
 Err:
-    MsgBox msgstr(msgColumnDoesNotExistOnTable, Array(getListObject(table).name, column))
+    MsgBox msgstr(msgKeyDoesNotExist, Array(getListObject(table).name, column, key))
 End Function
 
 '   テーブルを検索し、指定の列の値を取得する
@@ -157,18 +157,20 @@ End Function
 
 '   指定列範囲の値を得る
 Function getSettings(ByVal rng As Variant, _
-                Optional orientation As XlOrientation = xlHorizontal) As Object
+                Optional orientation As XlOrientation = xlHorizontal, _
+                Optional idx As Integer = 0) As Object
     Dim row, col As Long
     If Not IsObject(rng) Then Set rng = Range(rng)
     Set getSettings = CreateObject("Scripting.Dictionary")
     With rng
         If orientation = xlHorizontal Then
             For col = 1 To .columns.count
-                getSettings.item(.cells(1, col).Text) = .cells(2, col).Value
+                getSettings.item(.cells(1, col).Text) = .cells(2 + idx, col).Value
             Next
+            Exit Function
         Else
             For row = 1 To .rows.count
-                getSettings.item(.cells(row, 1).Text) = .cells(row, 2).Value
+                getSettings.item(.cells(row, 1).Text) = .cells(row, 2 + idx).Value
             Next
         End If
     End With
