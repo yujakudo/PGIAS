@@ -475,6 +475,7 @@ Public Function getPLbyCPM(ByVal CPM As Double, _
         i = 3
     End If
     getPLbyCPM = (CPM ^ 2 - CPMK(i)(0)) / CPMK(i)(1)
+    If getPLbyCPM < 0 Then getPLbyCPM = 0
     If align Then
         getPLbyCPM = Int(getPLbyCPM * 2 + 0.5) / 2
     End If

@@ -56,7 +56,6 @@ End Function
 
 '   ランクすべてを計算
 Public Sub SetAllRanking(ByVal table As Variant, ByRef settings As Object, ByRef dummySet As Object)
-    Dim settings As Object
     Dim row As Long
     Dim cel As Range
     
@@ -277,9 +276,10 @@ End Sub
 
 '   必要数の行を挿入する
 Private Sub insertRows(ByVal cel As Range, ByVal rowNum As Long)
-    Dim lcol, srow As Long
-    If rowNum > 2 Then
-        Range(cel.Offset(2, 0), cel.Offset(rowNum - 1, 0)).EntireRow.Insert
+    Dim lcol, srow, rows As Long
+    If cel.Offset(1, 0).Text = "" Then rows = 2 Else rows = 1
+    If rowNum > rows Then
+        Range(cel.Offset(rows, 0), cel.Offset(rowNum - 1, 0)).EntireRow.Insert
     End If
     srow = cel.ListObject.DataBodyRange.cells(1, 1).row
     srow = cel.row - srow + 1
@@ -544,6 +544,7 @@ End Function
 Public Function onRankingSheetChange(ByVal Target As Range, ByRef settings As Object) As Boolean
     Dim title As String
     onRankingSheetChange = False
+    
     With Target.Parent.ListObjects(1)
         If Target.CountLarge <> 1 Or _
             Application.Intersect(Target, .DataBodyRange) Is Nothing Then Exit Function
@@ -561,6 +562,12 @@ Public Function onRankingSheetChange(ByVal Target As Range, ByRef settings As Ob
         Call speciesChange(Target, settings)
     ElseIf title = BE_Memo Then
         Call memoChange(Target)
+    ElseIf title = BE_CPHP Then
+        '   2行目ならHPチェック変換
+        If Target.Offset(0, 1 - Target.column).Text = "" Then
+            Call checkHPValue(Target)
+        End If
+        Call calcParams(Target)
     ElseIf title = BE_PL Or title = BE_ATK _
             Or title = BE_DEF Or title = BE_HP Or title = BE_CPHP Then
         Call calcParams(Target)
@@ -572,10 +579,27 @@ Public Function onRankingSheetChange(ByVal Target As Range, ByRef settings As Ob
     onRankingSheetChange = True
 End Function
 
+'   HPのセルでレベルをHPに変換
+Public Sub checkHPValue(ByVal Target As Range)
+    Dim txt, h As String
+    Dim lvl As Integer
+    txt = Target.Text
+    If IsNumeric(txt) Then Exit Sub
+    txt = StrConv(txt, vbNarrow)
+    txt = StrConv(txt, vbLowerCase)
+    h = left(txt, 1)
+    If h = "l" Or h = "s" Then
+        lvl = val(Mid(txt, 2))
+        If lvl < 1 And 5 < lvl Then Exit Sub
+        Target.Value = Array(0, 600, 1800, 3600, 9000, 15000)(lvl)
+    End If
+End Sub
+
 '   種族名の変更
-Public Sub speciesChange(ByVal Target As Range, ByRef settings As Object)
+Private Sub speciesChange(ByVal Target As Range, ByRef settings As Object)
     Dim species, natk, satk As String
     Dim row As Long
+    If Target.Offset(1, 0) <> "" Then Call insertRows(Target, 2)
     If speciesExpectation(Target) Then
         species = getColumn(BE_Species, Target).Text
         Call setEnemyParams(Target, settings, species)
@@ -773,3 +797,41 @@ Private Function getEnemyFromSheet(ByVal mode As Integer, _
                 ByRef enemy As Monster, ByRef settings As Object) As Boolean
 
 End Function
+
+'   ランキングのモードが変わったので、タイトルを書き変える
+Public Sub changeRankingMode(ByVal Target As Range, ByVal mode As Variant)
+    Dim cel As Variant
+    Dim words As Variant
+    Dim idx, rnum, i As Integer
+    Dim wcels(1, 2) As Range
+    Dim inWthr As Boolean
+    
+    If Not IsNumeric(mode) Then
+        If mode = C_Gym Then idx = C_IdGym Else idx = C_IdMtc
+    End If
+    words = Array("PS_", "PT_")
+    Call enableEvent(False)
+    inWthr = False: rnum = 0
+    For Each cel In Target.Parent.ListObjects(1).HeaderRowRange
+        cel.Value = Replace(cel.Text, words(1 - idx), words(idx))
+        If InStr(cel.Text, BE_SuffixWeather) > 0 _
+                Or InStr(cel.Text, BE_SuffixPredictWeather) > 0 Then
+            If inWthr Then
+                Set wcels(rnum, 1) = cel
+            Else
+                Set wcels(rnum, 0) = cel
+                Set wcels(rnum, 1) = cel
+                inWthr = True
+            End If
+        ElseIf inWthr Then
+            inWthr = False
+            rnum = rnum + 1
+        End If
+    Next
+    If inWthr Then rnum = rnum + 1
+    Call enableEvent(True)
+    For i = 0 To rnum - 1
+        Range(wcels(i, 0), wcels(i, 1)).EntireColumn.Hidden = (idx = C_IdMtc)
+    Next
+End Sub
+

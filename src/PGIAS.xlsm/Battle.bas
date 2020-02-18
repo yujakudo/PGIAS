@@ -72,15 +72,15 @@ Public Type Monster
     logName As String
     itype(1) As Integer
     PL As Double
-    indATK As Integer
-    indDEF As Integer
-    indHP As Integer
+    indATK As Long
+    indDEF As Long
+    indHP As Long
     atkPower As Double
     defPower As Double
     hpPower As Double
     fullHP As Long
     curHP As Double
-    CP As Integer
+    CP As Long
     attacks() As Attack
     atkIndex(1) As AttackIndex
     given(1) As GivenDamage
@@ -679,7 +679,7 @@ Private Function stochTrans(ByRef effect As AttackEffect)
 End Function
 
 '   個体の取得
-Public Sub getIndividual(ByVal identifier As Variant, _
+Public Function getIndividual(ByVal identifier As Variant, _
                 ByRef mon As Monster, _
                 Optional ByVal prediction As Boolean = False)
     Dim ind As Object
@@ -687,6 +687,8 @@ Public Sub getIndividual(ByVal identifier As Variant, _
     Dim snum As Long
     Dim indAttr As Variant
     Dim PL As Double
+    
+    getIndividual = False
     '   必要なパラメータ
     indAttr = Array( _
         IND_Species, IND_indATK, IND_indDEF, IND_indHP, IND_PL, IND_prPL)
@@ -699,10 +701,15 @@ Public Sub getIndividual(ByVal identifier As Variant, _
         indAttr = seachAndGetValues( _
                 identifier, IND_Nickname, shIndividual, indAttr)
     End If
+    '   入力途中かチェック
+    If IsEmpty(indAttr(1)) Or IsEmpty(indAttr(2)) Or IsEmpty(indAttr(3)) Then
+        Exit Function
+    End If
     If prediction Then PL = indAttr(5) Else PL = indAttr(4)
     Call clearMonster(mon, nickname, indAttr(0), PL, _
                 indAttr(1), indAttr(2), indAttr(3))
-End Sub
+    getIndividual = True
+End Function
 
 '   個体のわざの取得
 Public Sub setIndividualAttacks(ByRef mon As Monster, _
@@ -753,10 +760,10 @@ End Sub
 Public Sub getMonster(ByRef mon As Monster, _
                     Optional ByVal species As String = "", _
                     Optional ByVal PL As Double = 40, _
-                    Optional ByVal indATK As Integer = 15, _
-                    Optional ByVal indDEF As Integer = 15, _
-                    Optional ByVal indHP As Integer = 15, _
-                    Optional ByVal defHP As Integer = 0)
+                    Optional ByVal indATK As Long = 15, _
+                    Optional ByVal indDEF As Long = 15, _
+                    Optional ByVal indHP As Long = 15, _
+                    Optional ByVal defHP As Long = 0)
     '   デフォルト値
     If species = "" Then
         Call clearMonster(mon)
@@ -776,24 +783,35 @@ Public Sub getMonsterByPower(ByRef mon As Monster, _
                     Optional ByVal atk As Double = 100, _
                     Optional ByVal def As Double = 100, _
                     Optional ByVal hp As Double = 100)
-    Dim attr As Variant
+    Dim attr, pow, limCPM(3) As Variant
     Dim CPM As Double
+    Dim i As Integer
     Call clearMonster(mon, "", species)
     mon.atkPower = atk
     mon.defPower = def
     mon.hpPower = hp
     mon.fullHP = Fix(hp)
     mon.curHP = mon.fullHP
+    limCPM(3) = Array(-1E+100, 1E+100)
     If species <> "" Then
+        pow = Array(atk, def, hp)
         attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
+        For i = 0 To 2
+            limCPM(i) = Array(pow(i) / (attr(i) + 15), pow(i) / attr(i))
+            If limCPM(3)(0) < limCPM(i)(0) Then limCPM(3)(0) = limCPM(i)(0)
+            If limCPM(3)(1) > limCPM(i)(1) Then limCPM(3)(1) = limCPM(i)(1)
+            If limCPM(3)(0) <= limCPM(3)(1) Then CPM = limCPM(3)(0)
+        Next
+        mon.PL = getPLbyCPM(CPM, False)
+        
         '   PLを減らして、マイナスがない値を見つける
-        For mon.PL = 40 To 1 Step -0.5
+'        For mon.PL = 40 To 1 Step -0.5
             CPM = getCPM(mon.PL)
             mon.indATK = atk / CPM - attr(0)
             mon.indDEF = def / CPM - attr(1)
             mon.indHP = hp / CPM - attr(2)
-            If mon.indATK >= 0 And mon.indDEF >= 0 And mon.indHP >= 0 Then Exit For
-        Next
+'            If mon.indATK >= 0 And mon.indDEF >= 0 And mon.indHP >= 0 Then Exit For
+'        Next
         '   計算不能
         If mon.PL < 1 Then
             mon.PL = 0
@@ -808,8 +826,8 @@ End Sub
 '   パラメータを指定して個体を取得
 Public Sub getMonsterByCpHp(ByRef mon As Monster, _
                     Optional ByVal species As String = "", _
-                    Optional ByVal CP As Integer = 1000, _
-                    Optional ByVal hp As Integer = 100)
+                    Optional ByVal CP As Long = 1000, _
+                    Optional ByVal hp As Long = 100)
     Dim attr As Variant
     Dim CPd, HPd, CPM, ADmax, AD, CPpHP As Double
     Dim a, b, c, p, q, u, v, ind As Double
@@ -931,10 +949,10 @@ Public Sub clearMonster(ByRef mon As Monster, _
         Optional ByVal nickname As String = "", _
         Optional ByVal species As String = "", _
         Optional ByVal PL As Double = 40, _
-        Optional ByVal indATK As Integer = 15, _
-        Optional ByVal indDEF As Integer = 15, _
-        Optional ByVal indHP As Integer = 15, _
-        Optional ByVal defHP As Integer = 0)
+        Optional ByVal indATK As Long = 15, _
+        Optional ByVal indDEF As Long = 15, _
+        Optional ByVal indHP As Long = 15, _
+        Optional ByVal defHP As Long = 0)
     Dim types As Variant
     mon.nickname = nickname
     mon.species = species
@@ -1308,5 +1326,3 @@ Public Function getAveKTR( _
     Next
     getAveKTR = sumKtr
 End Function
-
-

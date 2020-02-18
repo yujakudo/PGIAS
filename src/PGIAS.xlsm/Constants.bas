@@ -62,15 +62,19 @@ Public Const IND_GymNormalAtkTDPS As String = "tDPS_gn"
 Public Const IND_GymSpecialAtk1Damage As String = "ダメージ_gs1"
 Public Const IND_GymSpecialAtk1TDPS As String = "tDPS_gs1"
 Public Const IND_GymSpecialAtk1CDPS As String = "cDPS_gs1"
+Public Const IND_GymSpecialAtk1Cycle As String = "Cyc_gs1"
 Public Const IND_GymSpecialAtk2Damage As String = "ダメージ_gs2"
 Public Const IND_GymSpecialAtk2TDPS As String = "tDPS_gs2"
+Public Const IND_GymSpecialAtk2Cycle As String = "Cyc_gs2"
 Public Const IND_GymSpecialAtk2CDPS As String = "cDPS_gs2"
 Public Const IND_MtcNormalAtkDamage As String = "ダメージ_mn"
 Public Const IND_MtcNormalAtkTDPS As String = "tDPT_mn"
 Public Const IND_MtcSpecialAtk1Damage As String = "ダメージ_ms1"
 Public Const IND_MtcSpecialAtk1CDPS As String = "cDPT_ms1"
+Public Const IND_MtcSpecialAtk1Cycle As String = "Cyc_ms1"
 Public Const IND_MtcSpecialAtk2Damage As String = "ダメージ_ms2"
 Public Const IND_MtcSpecialAtk2CDPS As String = "cDPT_ms2"
+Public Const IND_MtcSpecialAtk2Cycle As String = "Cyc_ms2"
 
 Public Const IND_Predict As String = "_pr"
 Public Const IND_TargetPL As String = "PL_Target"
@@ -107,6 +111,7 @@ Public Const IND_prGymCDpsNormalAtkName As String = "通常わざ_cDPS_prg"
 Public Const IND_prGymCDpsSpecialAtkName As String = "ゲージわざ_cDPS_prg"
 Public Const IND_prGymCDPS As String = "cDPS_prg"
 Public Const IND_DeltaGymCDPS As String = "Δ_cDPS_prg"
+Public Const IND_prGymCycle As String = "Cyc_prg"
 
 Public Const IND_prMtc As String = "　_prm"
 Public Const IND_prMtcNormalAtkName As String = "わざ名_prmn"
@@ -121,6 +126,7 @@ Public Const IND_prMtcCDpsNormalAtkName As String = "通常わざ_cDPS_prm"
 Public Const IND_prMtcCDpsSpecialAtkName As String = "ゲージわざ_cDPS_prm"
 Public Const IND_prMtcCDPS As String = "cDPT_prm"
 Public Const IND_DeltaMtcCDPS As String = "Δ_cDPT_prm"
+Public Const IND_prMtcCycle As String = "Cyc_prm"
 
 '   個体マップ
 Public Const R_IndivMapTable As String = "個体マップ元表"
@@ -319,6 +325,26 @@ Public Const NELower_GymPr As String = "ジム予測"
 Public Const NELower_MtcNow As String = "対戦現在"
 Public Const NELower_MtcPr As String = "対戦予測"
 
+'   リスト
+Public Const LI_R_Select As String = "リスト選択"
+Public Const LI_R_Command As String = "リストコマンド"
+Public Const LI_Category As String = "カテゴリ"
+Public Const LI_Note As String = "備考"
+Public Const LI_Species As String = C_SpeciesName
+Public Const LI_PL As String = "PL"
+Public Const LI_ATK As String = "ATK"
+Public Const LI_DEF As String = "DEF"
+Public Const LI_HP As String = "HP"
+Public Const LI_CP As String = "CP"
+'   コマンド
+Public Const LI_CMD_Clear As String = "クリア"
+Public Const LI_CMD_SetAsRocket As String = "ロケット団パラメータ設定"
+'   リーダー名
+Public Const RCT_L0 As String = "サカキ"
+Public Const RCT_L1 As String = "シエラ"
+Public Const RCT_L2 As String = "グリフ"
+Public Const RCT_L3 As String = "アルロ"
+
 '   相関
 Public Const R_Type As String = "タイプ"
 Public Const R_InterTypeInflu As String = "相性表"
@@ -419,6 +445,9 @@ Public Const msgAddingRocketTroupe As String = "ロケット団を追加しています。"
 Public Const msgSureToAllClear As String = "すべてクリアします。よろしいですか？"
 Public Const msgDoesOpenLog As String = "ログがあります。開きますか？"
 Public Const msgNoChange As String = "変更はありません。"
+'   List
+Public Const msgClearList As String = "リスト {0} をクリアしています。"
+
 
 
 

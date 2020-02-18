@@ -171,9 +171,10 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As Boolean 
     Dim atkIdx, cols As Variant
     Dim idx, atkClass, mode As Integer
     Dim curPL As Double
+    Dim prPL As Double
     Dim changed(1), changedTargetAtk, changedCurPL, changedPrPL As Boolean
     
-    Call getIndividual(Target, self)
+    If Not getIndividual(Target, self) Then Exit Sub
     '   変化した列タイトルの取得と、その概要の真偽値
     tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).Text
     changed(C_IdNormalAtk) = InStr(tcol, C_NormalAttack) > 0
@@ -183,7 +184,7 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As Boolean 
     
     Call getMonster(enemy)   '   ダミー値
     curPL = self.PL
-    prPL = getColumn(IND_prPL, Target).Value
+    prPL = val(getColumn(IND_prPL, Target).Value)
     '   設定列タイトルの取得
     cols = getSettingColumns()
     '   書き込み
@@ -259,11 +260,15 @@ Private Sub setDamageAndDPS(ByVal Target As Range, ByVal columns As Variant, _
                 getColumn(columns(idx), Target).Value = .damage / .idleTime
                 idx = idx + 1
             End If
+            '   ゲージ技で列があればCDPS追記
             If .class = 1 And idx <= colLim Then
                 self.atkIndex(1).selected = atkIdx
                 cDpss = calcCDPS(self, enemy, True)
                 getColumn(columns(idx), Target).Value = cDpss.cDps
                 idx = idx + 1
+                If idx <= colLim Then   '   周期
+                    getColumn(columns(idx), Target).Value = cDpss.Cycle
+                End If
             End If
         End With
     Else
@@ -275,7 +280,7 @@ End Sub
 Private Sub setCDPS(ByVal Target As Range, ByVal columns As Variant, _
                 ByRef self As Monster, ByRef enemy As Monster, _
                 ByVal atkIdx As Integer)
-    Dim maxCDPS As Double
+    Dim maxCDPS, cyc As Double
     Dim maxAtkIdx(1) As Integer
     Dim colLim As Integer
     Dim cel As Range
@@ -297,12 +302,14 @@ Private Sub setCDPS(ByVal Target As Range, ByVal columns As Variant, _
             cDpss = calcCDPS(self, enemy, True)
             If maxCDPS < cDpss.cDps Then
                 maxCDPS = cDpss.cDps
+                cyc = cDpss.Cycle
                 maxAtkIdx(1) = atkIdx
             End If
         Next
         getColumn(columns(0), Target).Value = maxCDPS
         If colLim >= 1 Then Call setAtkNameToCol(self, maxAtkIdx(0), columns(1), Target)
         If colLim >= 2 Then Call setAtkNameToCol(self, maxAtkIdx(1), columns(2), Target)
+        If colLim >= 3 Then getColumn(columns(3), Target).Value = cyc
     '   それ以外は消す
     Else
         Call eraseColumns(columns, Target)
@@ -377,11 +384,11 @@ Private Function getSettingColumns()
             Array("", IND_GymNormalAtkDamage, IND_GymNormalAtkTDPS), _
             Array("", IND_MtcNormalAtkDamage, IND_MtcNormalAtkTDPS) _
         ), Array( _
-            Array("", IND_GymSpecialAtk1Damage, IND_GymSpecialAtk1TDPS, IND_GymSpecialAtk1CDPS), _
-            Array("", IND_MtcSpecialAtk1Damage, IND_MtcSpecialAtk1CDPS) _
+            Array("", IND_GymSpecialAtk1Damage, IND_GymSpecialAtk1TDPS, IND_GymSpecialAtk1CDPS, IND_GymSpecialAtk1Cycle), _
+            Array("", IND_MtcSpecialAtk1Damage, IND_MtcSpecialAtk1CDPS, IND_MtcSpecialAtk1Cycle) _
         ), Array( _
-            Array("", IND_GymSpecialAtk2Damage, IND_GymSpecialAtk2TDPS, IND_GymSpecialAtk2CDPS), _
-            Array("", IND_MtcSpecialAtk2Damage, IND_MtcSpecialAtk2CDPS) _
+            Array("", IND_GymSpecialAtk2Damage, IND_GymSpecialAtk2TDPS, IND_GymSpecialAtk2CDPS, IND_GymSpecialAtk2Cycle), _
+            Array("", IND_MtcSpecialAtk2Damage, IND_MtcSpecialAtk2CDPS, IND_MtcSpecialAtk2Cycle) _
         ), Array( _
             Array(IND_prGymNormalAtkName, IND_prGymNormalAtkDamage, IND_prGymNormalAtkTDPS), _
             Array(IND_prMtcNormalAtkName, IND_prMtcNormalAtkDamage, IND_prMtcNormalAtkTDPS) _
@@ -389,8 +396,8 @@ Private Function getSettingColumns()
             Array(IND_prGymSpecialAtkName, IND_prGymSpecialAtkDamage, IND_prGymSpecialAtkTDPS), _
             Array(IND_prMtcSpecialAtkName, IND_prMtcSpecialAtkDamage) _
         ), Array( _
-            Array(IND_prGymCDPS, IND_prGymCDpsNormalAtkName, IND_prGymCDpsSpecialAtkName), _
-            Array(IND_prMtcCDPS, IND_prMtcCDpsNormalAtkName, IND_prMtcCDpsSpecialAtkName) _
+            Array(IND_prGymCDPS, IND_prGymCDpsNormalAtkName, IND_prGymCDpsSpecialAtkName, IND_prGymCycle), _
+            Array(IND_prMtcCDPS, IND_prMtcCDpsNormalAtkName, IND_prMtcCDpsSpecialAtkName, IND_prMtcCycle) _
     ))
 End Function
 
@@ -405,6 +412,7 @@ Sub alignIndividualTable()
     Call doMacro
 End Sub
 
+'   攻撃パラメータの再計算
 Sub calcAllIndividualTable()
     Dim row As Long
     Call doMacro(msgCalculatingIndividualSheet)

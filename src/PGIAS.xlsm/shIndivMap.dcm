@@ -41,7 +41,7 @@ Public Sub makeMap()
 '    If Not shIndividual.checkPL() Then Exit Sub
     Call doMacro(msgstr(msgMaking, name))
     Set settings = getSettings(R_IndivMapSettings)
-'    Call shIndividual.calcAllIndividualTable
+    Call shIndividual.calcAllIndividualTable
     Call clearInputs
     Call makeOrgTable
     Set cho = ChartObjects(1)

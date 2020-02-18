@@ -49,6 +49,9 @@ End Sub
 '   ƒZƒ‹’l‚Ì•ÏX
 Private Sub Worksheet_Change(ByVal Target As Range)
     Dim settings As Object
+    If Target = Range(BE_R_Settngs).cells(2, 1) Then
+        Call changeRankingMode(Target, Range(BE_R_Settngs).cells(2, 1).Text)
+    End If
     Set settings = getSettings(Range(BE_R_Settngs))
     Call onRankingSheetChange(Target, settings)
 End Sub
