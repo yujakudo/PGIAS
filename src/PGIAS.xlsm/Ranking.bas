@@ -56,6 +56,7 @@ End Function
 
 '   ランクすべてを計算
 Public Sub SetAllRanking(ByVal table As Variant, ByRef settings As Object, ByRef dummySet As Object)
+    Dim settings As Object
     Dim row As Long
     Dim cel As Range
     
@@ -276,10 +277,9 @@ End Sub
 
 '   必要数の行を挿入する
 Private Sub insertRows(ByVal cel As Range, ByVal rowNum As Long)
-    Dim lcol, srow, rows As Long
-    If cel.Offset(1, 0).Text = "" Then rows = 2 Else rows = 1
-    If rowNum > rows Then
-        Range(cel.Offset(rows, 0), cel.Offset(rowNum - 1, 0)).EntireRow.Insert
+    Dim lcol, srow As Long
+    If rowNum > 2 Then
+        Range(cel.Offset(2, 0), cel.Offset(rowNum - 1, 0)).EntireRow.Insert
     End If
     srow = cel.ListObject.DataBodyRange.cells(1, 1).row
     srow = cel.row - srow + 1
@@ -562,12 +562,6 @@ Public Function onRankingSheetChange(ByVal Target As Range, ByRef settings As Ob
         Call speciesChange(Target, settings)
     ElseIf title = BE_Memo Then
         Call memoChange(Target)
-    ElseIf title = BE_CPHP Then
-        '   2行目ならHPチェック変換
-        If Target.Offset(0, 1 - Target.column).Text = "" Then
-            Call checkHPValue(Target)
-        End If
-        Call calcParams(Target)
     ElseIf title = BE_PL Or title = BE_ATK _
             Or title = BE_DEF Or title = BE_HP Or title = BE_CPHP Then
         Call calcParams(Target)
@@ -579,27 +573,10 @@ Public Function onRankingSheetChange(ByVal Target As Range, ByRef settings As Ob
     onRankingSheetChange = True
 End Function
 
-'   HPのセルでレベルをHPに変換
-Public Sub checkHPValue(ByVal Target As Range)
-    Dim txt, h As String
-    Dim lvl As Integer
-    txt = Target.Text
-    If IsNumeric(txt) Then Exit Sub
-    txt = StrConv(txt, vbNarrow)
-    txt = StrConv(txt, vbLowerCase)
-    h = left(txt, 1)
-    If h = "l" Or h = "s" Then
-        lvl = val(Mid(txt, 2))
-        If lvl < 1 And 5 < lvl Then Exit Sub
-        Target.Value = Array(0, 600, 1800, 3600, 9000, 15000)(lvl)
-    End If
-End Sub
-
 '   種族名の変更
-Private Sub speciesChange(ByVal Target As Range, ByRef settings As Object)
+Public Sub speciesChange(ByVal Target As Range, ByRef settings As Object)
     Dim species, natk, satk As String
     Dim row As Long
-    If Target.Offset(1, 0) <> "" Then Call insertRows(Target, 2)
     If speciesExpectation(Target) Then
         species = getColumn(BE_Species, Target).Text
         Call setEnemyParams(Target, settings, species)

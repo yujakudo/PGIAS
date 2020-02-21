@@ -327,7 +327,6 @@ Public Const NELower_MtcPr As String = "対戦予測"
 
 '   リスト
 Public Const LI_R_Select As String = "リスト選択"
-Public Const LI_R_Command As String = "リストコマンド"
 Public Const LI_Category As String = "カテゴリ"
 Public Const LI_Note As String = "備考"
 Public Const LI_Species As String = C_SpeciesName
@@ -336,10 +335,7 @@ Public Const LI_ATK As String = "ATK"
 Public Const LI_DEF As String = "DEF"
 Public Const LI_HP As String = "HP"
 Public Const LI_CP As String = "CP"
-'   コマンド
-Public Const LI_CMD_Clear As String = "クリア"
-Public Const LI_CMD_SetAsRocket As String = "ロケット団パラメータ設定"
-'   リーダー名
+
 Public Const RCT_L0 As String = "サカキ"
 Public Const RCT_L1 As String = "シエラ"
 Public Const RCT_L2 As String = "グリフ"
@@ -446,7 +442,7 @@ Public Const msgSureToAllClear As String = "すべてクリアします。よろしいですか？
 Public Const msgDoesOpenLog As String = "ログがあります。開きますか？"
 Public Const msgNoChange As String = "変更はありません。"
 '   List
-Public Const msgClearList As String = "リスト {0} をクリアしています。"
+Public Const msgClearList As String = "リストをクリアしています。"
 
 
 

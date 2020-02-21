@@ -174,7 +174,7 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As Boolean 
     Dim prPL As Double
     Dim changed(1), changedTargetAtk, changedCurPL, changedPrPL As Boolean
     
-    If Not getIndividual(Target, self) Then Exit Sub
+    Call getIndividual(Target, self)
     '   変化した列タイトルの取得と、その概要の真偽値
     tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).Text
     changed(C_IdNormalAtk) = InStr(tcol, C_NormalAttack) > 0
