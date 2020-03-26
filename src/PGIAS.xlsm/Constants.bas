@@ -6,9 +6,14 @@ Public Const C_IdGym As Integer = 0
 Public Const C_IdMtc As Integer = 1
 Public Const C_IdNormalAtk As Integer = 0
 Public Const C_IdSpecialAtk As Integer = 1
+Public Const C_UpperCPl1 As Long = 1500
+Public Const C_UpperCPl2 As Long = 2500
+Public Const C_MaxPL As Long = 40
+Public Const C_MaxLong As Long = 2000000000
 
-Public Const C_TYPE As String = "ƒ^ƒCƒv"
+Public Const C_Type As String = "ƒ^ƒCƒv"
 Public Const C_SpeciesName As String = "í‘°–¼"
+Public Const C_Nickname As String = "ƒjƒbƒNƒl[ƒ€"
 Public Const C_NormalAttack As String = "’Êí‚í‚´"
 Public Const C_SpecialAttack As String = "ƒQ[ƒW‚í‚´"
 Public Const C_Self = "©"
@@ -17,22 +22,49 @@ Public Const C_Attack = "UŒ‚"
 Public Const C_Defense = "–hŒä"
 Public Const C_Up = "ª"
 Public Const C_Down = "«"
+Public Const C_AutoTarget = "©“®–Ú•W"
+Public Const C_None = "‚È‚µ"
+Public Const C_League1 = "ƒX[ƒp[ƒŠ[ƒO"
+Public Const C_League2 = "ƒnƒCƒp[ƒŠ[ƒO"
+Public Const C_League3 = "ƒ}ƒXƒ^[ƒŠ[ƒO"
+Public Const C_Level = "ƒŒƒxƒ‹"
 Public Const C_LabelAlign = "ƒ‰ƒxƒ‹’²®"
 Public Const C_XAxis = "X²"
 Public Const C_YAxis = "Y²"
 Public Const C_XPrediction = "X²—\‘ª"
 Public Const C_YPrediction = "Y²—\‘ª"
+Public Const C_CpUpper = "CPãŒÀ"
+Public Const C_PrCpLower = "—\‘ªCP‰ºŒÀ"
 
+Public Const C_Weather As String = "“VŒó"
+Public Const C_Current As String = "Œ»İ"
 Public Const C_Prediction As String = "—\‘ª"
 Public Const C_Gym As String = "ƒWƒ€"
 Public Const C_Match As String = "‘Îí"
+Public Const C_SimMode As String = "Simƒ‚[ƒh"
+Public Const C_SelfAtkDelay As String = "©UŒ‚’x‰„"
+Public Const C_EnemyAtkDelay As String = "“GUŒ‚’x‰„"
+Public Const C_KT As String = "KT"
+Public Const C_KTR As String = "KTR"
+Public Const C_ON As String = "ON"
+Public Const C_OFF As String = "OFF"
+Public Const C_Set As String = "İ’è"
+Public Const C_NotSet As String = "–¢İ’è"
+Public Const C_DummyNormalAttack As String = "ƒ_ƒ~[’Êí‚í‚´"
+Public Const C_DummySpecialAttack As String = "ƒ_ƒ~[ƒQ[ƒW‚í‚´"
+Public Const C_Map As String = "ƒ}ƒbƒv"
+
+Public Const cmdClear As String = "ƒNƒŠƒA"
+Public Const cmdRemove As String = "íœ"
+Public Const cmdCalculate As String = "ŒvZ"
+Public Const cmdSetWeather As String = "“VŒóİ’è"
 
 Public Const TBL_NormalAtk As String = "’Êí‚í‚´•\"
 Public Const TBL_SpecialAtk As String = "ƒQ[ƒW‚í‚´•\"
 
 '   ŒÂ‘Ì
 'Public Const SH_Individual As String = "ŒÂ‘Ì"
-Public Const IND_Nickname As String = "ƒjƒbƒNƒl[ƒ€"
+Public Const IND_Nickname As String = C_Nickname
 Public Const IND_Type1 As String = "ƒ^ƒCƒv1"
 Public Const IND_Type2 As String = "ƒ^ƒCƒv2"
 Public Const IND_Species As String = C_SpeciesName
@@ -76,7 +108,7 @@ Public Const IND_MtcSpecialAtk2Damage As String = "ƒ_ƒ[ƒW_ms2"
 Public Const IND_MtcSpecialAtk2CDPS As String = "cDPT_ms2"
 Public Const IND_MtcSpecialAtk2Cycle As String = "Cyc_ms2"
 
-Public Const IND_Predict As String = "_pr"
+Public Const IND_AutoTarget As String = "_pr"
 Public Const IND_TargetPL As String = "PL_Target"
 Public Const IND_prPL As String = "PL_pr"
 Public Const IND_dPL As String = "ƒ¢_PL"
@@ -129,12 +161,13 @@ Public Const IND_DeltaMtcCDPS As String = "ƒ¢_cDPT_prm"
 Public Const IND_prMtcCycle As String = "Cyc_prm"
 
 '   ŒÂ‘Ìƒ}ƒbƒv
-Public Const R_IndivMapTable As String = "ŒÂ‘Ìƒ}ƒbƒvŒ³•\"
-Public Const R_IndivMapTypeSelect As String = "ŒÂ‘Ìƒ}ƒbƒvƒ^ƒCƒv‘I‘ğ"
-Public Const R_IndivMapIndivSelect As String = "ŒÂ‘Ìƒ}ƒbƒvŒÂ‘Ì‘I‘ğ"
-Public Const R_IndivMapSettings As String = "ŒÂ‘Ìƒ}ƒbƒvİ’è"
+Public Const IMAP_R_Table As String = "ŒÂ‘Ìƒ}ƒbƒvŒ³•\"
+Public Const IMAP_R_TypeSelect As String = "ŒÂ‘Ìƒ}ƒbƒvƒ^ƒCƒv‘I‘ğ"
+Public Const IMAP_R_IndivSelect As String = "ŒÂ‘Ìƒ}ƒbƒvŒÂ‘Ì‘I‘ğ"
+Public Const IMAP_R_Settings As String = "ŒÂ‘Ìƒ}ƒbƒvİ’è"
+Public Const IMAP_R_MakingTime As String = "ŒÂ‘Ìƒ}ƒbƒvì¬ŠÔ"
 
-Public Const IMAP_Name As String = "ƒjƒbƒNƒl[ƒ€"
+Public Const IMAP_Name As String = C_Nickname
 Public Const IMAP_Species As String = C_SpeciesName
 Public Const IMAP_Endurance As String = "‘Ï‹v—Í"
 Public Const IMAP_CDPS As String = "cDPS"
@@ -156,7 +189,7 @@ Public Const SPEC_SpecialAttackLimited As String = "ŒÀ’è" & C_SpecialAttack
 
 '   ‚í‚´
 Public Const ATK_Name As String = "‚í‚´–¼"
-Public Const ATK_Type As String = C_TYPE
+Public Const ATK_Type As String = C_Type
 Public Const ATK_GymPower As String = "ˆĞ—Í_g"
 Public Const ATK_MtcPower As String = "ˆĞ—Í_m"
 Public Const ATK_GymCharge As String = "ƒ`ƒƒ[ƒW_g"
@@ -168,8 +201,8 @@ Public Const ATK_DamageDelay As String = "ŠÔ_dd"
 Public Const ATK_IdleTurnNum As String = "ƒ^[ƒ“_it"
 Public Const ATK_DPT As String = "DPT"
 Public Const ATK_EPT As String = "EPT"
-Public Const ATK_GaugeNumber As String = "”_gage"
-Public Const ATK_GaugeVolume As String = "—Ê_gage"
+Public Const ATK_GaugeNumber As String = "”_gg"
+Public Const ATK_GaugeVolume As String = "—Ê_gg"
 Public Const ATK_DPE As String = "DPE"
 Public Const ATK_Effect As String = "Œø‰Ê"
 Public Const ATK_EffectStep As String = "ŠK"
@@ -184,7 +217,7 @@ Public Const ATK_CorrDPE As String = "DPE_mc"
 
 '   ƒ^ƒCƒv•ÊƒV[ƒg
 Public Const R_ClassifiedByType As String = "ƒ^ƒCƒv•Ê•\"
-Public Const CBT_Type As String = C_TYPE
+Public Const CBT_Type As String = C_Type
 Public Const CBT_DoubleWeak As String = "x2.56"
 Public Const CBT_SingleWeak As String = "x1.6"
 Public Const CBT_Soso As String = "x1.0"
@@ -262,71 +295,82 @@ Public Const R_SpeciesMapTypeSelect As String = "í‘°ƒ}ƒbƒvƒ^ƒCƒv‘I‘ğ"
 Public Const R_SpeciesMapSpeciesSelect As String = "í‘°ƒ}ƒbƒví‘°‘I‘ğ"
 Public Const R_SpeciesMapSettings As String = "í‘°ƒ}ƒbƒvİ’è"
 
-'   ƒWƒ€E‘Îí
-Public Const BE_R_Settngs As String = "İ’è"
-Public Const ME_R_Settngs As String = "‘Îíƒoƒgƒ‹İ’è"
-Public Const BE_SetMode As String = "ƒ‚[ƒh"
-Public Const BE_SetSelfAtkDelay As String = "©UŒ‚’x‰„"
-Public Const BE_SetEnemyAtkDelay As String = "“GUŒ‚’x‰„"
-Public Const BE_SetRankNum As String = "‡ˆÊ”"
-Public Const BE_SetRankVar As String = "‡ˆÊ•t‚¯"
-Public Const BE_SetWithLimit As String = "ŒÀ’è‹Z"
-Public Const BE_DefCpUpper As String = "CPãŒÀƒfƒtƒHƒ‹ƒg"
-Public Const BE_DefCpLower As String = "CP‰ºŒÀƒfƒtƒHƒ‹ƒg"
+'   ‘Îôƒ‰ƒ“ƒN
+Public Const CR_Weather As String = C_Weather
+Public Const CR_Species As String = C_SpeciesName
+Public Const CR_Memo As String = "”õl"
+Public Const CR_Attacks As String = "/ƒQ[ƒW‚í‚´"
+Public Const CR_PL As String = "PL"
+Public Const CR_ATK As String = "ATK"
+Public Const CR_DEF As String = "DEF"
+Public Const CR_HP As String = "HP"
+Public Const CR_CPHP As String = "CP/HP"
+Public Const CR_CPLimit As String = "/‰ºŒÀ"
+Public Const CR_Time As String = "/“ú"
 
-Public Const BE_R_DummyEnemy As String = "ƒ_ƒ~["
+Public Const CR_Current As String = "Œ»İ"
+Public Const CR_Prediction As String = "—\‘ª"
 
-Public Const BE_Species As String = C_SpeciesName
-Public Const BE_Memo As String = "”õl"
-Public Const BE_NormalAttack As String = C_NormalAttack
-Public Const BE_SpecialAttack As String = C_SpecialAttack
-Public Const BE_SpecInput = "PLŒÂ‘Ì’l"
-Public Const BE_PL = "PL"
-Public Const BE_ATK = "ATK"
-Public Const BE_DEF = "DEF"
-Public Const BE_HP = "HP"
-Public Const BE_CPHP = "CP/HP"
-'Public Const BE_HP = "HP"
-Public Const BE_UpperCP = "ãŒÀ"
-Public Const BE_LowerCP = "‰ºŒÀ"
-Public Const BE_BaseRank = "“VŒó–¢İ’è"
-Public Const BE_SubRank = "“VŒóİ’è"
-Public Const BE_Weather As String = "“VŒó"
-Public Const BE_Rank As String = "‡ˆÊ"
-Public Const BE_CtrName As String = "ƒjƒbƒNƒl[ƒ€"
-Public Const BE_CtrAttack As String = C_SpecialAttack
-Public Const BE_KT As String = "KT"
-Public Const BE_KTR As String = "KTR"
-Public Const BE_RankOut As String = "ƒ‰ƒ“ƒN—‚¿"
-Public Const BE_CalcTime As String = "ŒvZŠÔ"
+Public Const CR_Rank As String = "‡ˆÊ"
+Public Const CR_CtrName As String = C_Nickname
+Public Const CR_CtrPL As String = "PL"
+Public Const CR_CtrNormalAttack As String = C_NormalAttack
+Public Const CR_CtrSpecialAttack As String = C_SpecialAttack
+Public Const CR_CtrCDPS As String = "cDPS"
 
-Public Const BE_RankBase As String = "‡ˆÊ_b"
+Public Const CR_KT As String = C_KT
+Public Const CR_KTR As String = C_KTR
 
-Public Const BE_SuffixBase As String = "_b"
-Public Const BE_SuffixWeather As String = "_w"
-Public Const BE_SuffixPredictBase As String = "_pb"
-Public Const BE_SuffixPredictWeather As String = "_pw"
+Public Const CR_SuffixBase As String = "_b"
+Public Const CR_SuffixPredict As String = "_p"
+Public Const CR_SuffixWeather As String = "_w"
 
-Public Const BE_NewEntryColorIndex As Integer = 30
-Public Const BE_ReEntryColorIndex As Integer = 38
+Public Const CR_NewEntryColorIndex As Integer = 30
+Public Const CR_ReEntryColorIndex As Integer = 38
+Public Const CR_DropEntryColorIndex As Integer = 23
+'   İ’è
+Public Const CR_R_ListSelect As String = "‘ÎôƒŠƒXƒg‘I‘ğ"
+Public Const CR_R_AllCalcTime As String = "‘Îô‘SŒvZŠÔ"
+Public Const CR_R_WeatherGuess As String = "‘Îô“VŒóİ’è"
+Public Const CR_R_Settngs As String = "‘Îôİ’è"
+Public Const CR_SetMode As String = C_SimMode
+Public Const CR_SetSelfAtkDelay As String = C_SelfAtkDelay
+Public Const CR_SetEnemyAtkDelay As String = C_EnemyAtkDelay
+Public Const CR_SetRankNum As String = "‡ˆÊ”"
+Public Const CR_SetRankVar As String = "‡ˆÊ•t‚¯"
+Public Const CR_SetWithLimit_b As String = "‹ó”’ŒÀ’è‹Z_b"
+Public Const CR_DefCpUpper As String = "CPãŒÀƒfƒtƒHƒ‹ƒg"
+Public Const CR_DefCpLower As String = "CP‰ºŒÀƒfƒtƒHƒ‹ƒg"
+Public Const CR_CountRankCur As String = "Œ»İWŒvƒ‰ƒ“ƒN"
+Public Const CR_CountRankPr As String = "—\‘ªWŒvƒ‰ƒ“ƒN"
 
-'   Šú‘ÒŒÂ‘Ì
-Public Const NE_Name As String = "ƒjƒbƒNƒl[ƒ€"
+'   ƒ_ƒ~[‚Ìİ’è
+Public Const CR_R_DummyEnemy As String = "‘Îôƒ_ƒ~[İ’è"
+Public Const CR_DmyAtkPower As String = "UŒ‚—Í"
+Public Const CR_DmyDefPower As String = "–hŒä—Í"
+Public Const CR_DmyHP As String = "HP"
+Public Const CR_DmyCP As String = "CP"
+
+Public Const CR_SheetPrefix As String = "‘Îô"
+
+'   WŒv
+Public Const NE_Name As String = C_Nickname
 Public Const NE_EntryNum As String = "“oê”"
+Public Const NE_FlagedNum As String = "“oê”_f"
 Public Const NE_Type As String = "ƒ^ƒCƒv"
 Public Const NE_PL As String = "PL"
 Public Const NE_prPL As String = "PL_pr"
 Public Const NE_Candies As String = "ƒAƒ"
 Public Const NE_Sands As String = "¯‚Ì»"
+Public Const NE_ColumnsNum As Integer = 8
+Public Const NE_DataRow As Long = 5
 
-Public Const NER_CountLower As String = "Œv”‰ºŒÀ‡ˆÊ"
-Public Const NELower_GymNow As String = "ƒWƒ€Œ»İ"
-Public Const NELower_GymPr As String = "ƒWƒ€—\‘ª"
-Public Const NELower_MtcNow As String = "‘ÎíŒ»İ"
-Public Const NELower_MtcPr As String = "‘Îí—\‘ª"
+Public Const NE_TableName As String = "WŒv•\"
+Public Const NE_CalcAllTime As String = "WŒv‘SŒvZŠÔ"
 
 '   ƒŠƒXƒg
 Public Const LI_R_Select As String = "ƒŠƒXƒg‘I‘ğ"
+Public Const LI_R_Command As String = "ƒŠƒXƒgƒRƒ}ƒ“ƒh"
 Public Const LI_Category As String = "ƒJƒeƒSƒŠ"
 Public Const LI_Note As String = "”õl"
 Public Const LI_Species As String = C_SpeciesName
@@ -335,11 +379,22 @@ Public Const LI_ATK As String = "ATK"
 Public Const LI_DEF As String = "DEF"
 Public Const LI_HP As String = "HP"
 Public Const LI_CP As String = "CP"
-
+Public Const LI_DefaultListName As String = "’è‹`ƒŠƒXƒg"
+'   ƒRƒ}ƒ“ƒh
+Public Const LI_CMD_Clear As String = "ƒNƒŠƒA"
+Public Const LI_CMD_SetAsRocket As String = "ƒƒPƒbƒg’cƒpƒ‰ƒ[ƒ^İ’è"
+'   ƒŠ[ƒ_[–¼
 Public Const RCT_L0 As String = "ƒTƒJƒL"
 Public Const RCT_L1 As String = "ƒVƒGƒ‰"
 Public Const RCT_L2 As String = "ƒOƒŠƒt"
 Public Const RCT_L3 As String = "ƒAƒ‹ƒ"
+
+'   QÆ
+Public Const RFR_Nickname As String = C_Nickname
+Public Const RFR_Type As String = C_Type
+Public Const RFR_NormalAtk As String = C_NormalAttack
+Public Const RFR_SpecialAtk As String = C_SpecialAttack
+
 
 '   ‘ŠŠÖ
 Public Const R_Type As String = "ƒ^ƒCƒv"
@@ -356,27 +411,13 @@ Public Const R_WeatherTable As String = "“VŒó•\"
 
 '   CPM
 Public Const R_StatusTransition As String = "‚í‚´‚Ì”\—Í•Ï‰»"
-Public Const R_RocketTroupe As String = "ƒƒPƒbƒg’c"
-Public Const RT_Name As String = "–¼Ì"
-Public Const RT_Number As String = "”Ô–Ú"
-Public Const RT_Species As String = "í‘°–¼"
+'Public Const R_RocketTroupe As String = "ƒƒPƒbƒg’c"
+'Public Const RT_Name As String = "–¼Ì"
+'Public Const RT_Number As String = "”Ô–Ú"
+'Public Const RT_Species As String = "í‘°–¼"
 
 '   Å‘å’l
 Public Const R_DummyParameter As String = "ƒ_ƒ~[‚Ì“G‚Ìƒpƒ‰ƒ[ƒ^"
-Public Const DM_AtkPower As String = "UŒ‚—Í"
-Public Const DM_DefPower As String = "–hŒä—Í"
-Public Const DM_HP As String = "HP"
-Public Const DM_GymNAtkPower As String = "ˆĞ—Í_ng"
-Public Const DM_GymNAtkCharge As String = "ƒ`ƒƒ[ƒW_g"
-Public Const DM_GymNAtkIdleTime As String = "”­¶ŠÔ"
-Public Const DM_MtcNAtkPower As String = "ˆĞ—Í_nm"
-Public Const DM_MtcNAtkCharge As String = "ƒ`ƒƒ[ƒW_m"
-Public Const DM_MtcNAtkIdleTurn As String = "”­¶ƒ^[ƒ“"
-Public Const DM_GymSAtkPower As String = "ˆĞ—Í_s"
-Public Const DM_GymSAtkGuageNum As String = "ƒQ[ƒW”"
-Public Const DM_GymSAtkIdleTime As String = "”­“®ŠÔ_s"
-Public Const DM_MtcSAtkPower As String = "ˆĞ—Í_sm"
-Public Const DM_MtcSAtkGuageVol As String = "ƒQ[ƒW—Ê"
 '   Ver
 Public Const VH_Branch As String = "ƒuƒ‰ƒ“ƒ`"
 Public Const VH_Version As String = "Ver."
@@ -391,20 +432,21 @@ Public Const GS_UseLimitedAttacksOnSpeciesAna As String = "í‘°•ªÍ‚ÅŒÀ’è‚í‚´"
 
 
 '   ƒƒbƒZ[ƒW
+Public Const msgDoSomething As String = "..."
 Public Const msgConfirm As String = "–{“–‚É{0}‚µ‚Ä‚à‚¢‚¢‚Å‚·‚©H"
 Public Const msgProcessing As String = "{1}‚ğ{0}‚µ‚Ä‚¢‚Ü‚·B"
-Public Const msgClear As String = "ƒNƒŠƒA"
-Public Const msgRemove As String = "íœ"
-Public Const msgCalculate As String = "ŒvZ"
 Public Const msgRanking As String = "ƒ‰ƒ“ƒLƒ“ƒO"
 Public Const msgExporting As String = "ƒGƒNƒXƒ|[ƒg‚µ‚Ä‚¢‚Ü‚·B"
 Public Const msgImporting As String = "ƒCƒ“ƒ|[ƒg‚µ‚Ä‚¢‚Ü‚·B"
 Public Const msgAllSheet As String = "‘S‚Ä‚ÌƒV[ƒg"
+Public Const msgAllInDivAna As String = "‘S‚Ä‚ÌŒÂ‘Ì•ªÍ"
+Public Const msgChaingingSettings As String = "İ’è‚ğ•ÏX‚µ‚Ä‚¢‚Ü‚·B"
 
 Public Const msgMakingTable As String = "{0}ƒe[ƒuƒ‹‚ğì¬‚µ‚Ä‚¢‚Ü‚·B"
 Public Const msgMakingSheet As String = "{0}ƒV[ƒg‚ğì¬‚µ‚Ä‚¢‚Ü‚·B"
 Public Const msgMaking As String = "{0}‚ğì¬‚µ‚Ä‚¢‚Ü‚·B"
 Public Const msgReseting As String = "{0}‚ğƒŠƒZƒbƒg‚µ‚Ä‚¢‚Ü‚·B"
+Public Const msgInitializing As String = "{0}‚ğ‰Šú‰»‚µ‚Ä‚¢‚Ü‚·B"
 
 Public Const msgSetColorToTypesOnTheSheet As String = "{0}ƒV[ƒg‚Ìƒ^ƒCƒv‚ÉF‚ğ•t‚¯‚Ä‚¢‚Ü‚·B"
 Public Const msgSetColorToTypesAndAttcksOnTheSheet As String = "{0}ƒV[ƒg‚Ìƒ^ƒCƒv‚Æ‚í‚´–¼‚ÉF‚ğ•t‚¯‚Ä‚¢‚Ü‚·B"
@@ -416,9 +458,6 @@ Public Const msgKeyDoesNotExist As String = "{0}ƒV[ƒg‚Ì{1}—ñ‚Éu{2}v‚ª‚ ‚è‚Ü‚¹
 Public Const msgColumnDoesNotExist As String = "{0}ƒV[ƒg‚Éu{1}v‚Æ‚¢‚¤—ñ‚Í‚ ‚è‚Ü‚¹‚ñB"
 Public Const msgNoIdentifier As String = "{0}ƒV[ƒg‚Ì{1}s{2}—ñ‚Éu{3}v‚ª‚ ‚è‚Ü‚¹‚ñB"
 Public Const msgColumnDoesNotExistOnTable As String = "u{0}v‚Éu{1}v‚Æ‚¢‚¤—ñ‚Í‚ ‚è‚Ü‚¹‚ñB"
-
-Public Const msgHitAttack As String = "{0}:{1}Bƒ_ƒ[ƒW{2}B"
-Public Const msgMonStatus As String = "{0}: HP:{1}, Rsv:{2}"
 
 '   shSpecies
 Public Const msgAttackIsLimited As String = "u{0}v‚ğí‘°ƒV[ƒg‚É’Ç‰Á‚µ‚Ü‚·Bu{0}v‚ÍŒÀ’è‚í‚´‚Å‚·‚©H" _
@@ -433,17 +472,17 @@ Public Const msgAligningIndividualSheet As String = "ŒÂ‘ÌƒV[ƒg‚ğ’²®‚µ‚Ä‚¢‚Ü‚·
 Public Const msgPLis0 As String = "PL‚ª0‚ÌŒÂ‘Ì‚ª‚ ‚è‚Ü‚µ‚½Bƒpƒ‰ƒ[ƒ^‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B"
 '   shIndivMap
 Public Const msgAllRecalc As String = "‘S‚Ä‚ÌŒÂ‘Ì•ªÍƒV[ƒg‚ÌÄŒvZ‚ğ‚µ‚Ä‚¢‚Ü‚·B"
+Public Const msgSettingMap As String = "ƒ}ƒbƒv‚ğİ’è‚µ‚Ä‚¢‚Ü‚·B"
 '   Ranking
+Public Const msgCopyingRegion As String = "—Ìˆæ‚ğƒRƒs[‚µ‚Ä‚¢‚Ü‚·B"
 Public Const msgCalcRank As String = "{0}‚Ì‘Îôƒ‰ƒ“ƒLƒ“ƒO‚ğŒvZ‚µ‚Ä‚¢‚Ü‚·B"
-Public Const msgSetWildCard As String = "‚·‚×‚Ä‚Ì‘Šè‚ÉƒƒCƒ‹ƒhƒJ[ƒh‚ğİ’è‚µ‚Ä‚¢‚Ü‚·B"
-Public Const msgAddingRocketTroupe As String = "ƒƒPƒbƒg’c‚ğ’Ç‰Á‚µ‚Ä‚¢‚Ü‚·B"
+Public Const msgSetWildCard As String = "ƒ_ƒ~[‚Ì‘Šè‚ğİ’è‚µ‚Ä‚¢‚Ü‚·B"
+Public Const msgAddingListItems As String = "ƒŠƒXƒgu{0}v‚©‚ç‘Šè‚ğ’Ç‰Á‚µ‚Ä‚¢‚Ü‚·B"
+Public Const msgAskChangeBattleMode As String = "‘Îíƒ‚[ƒh‚ğ•ÏX‚·‚é‚ÆA‚·‚×‚Ä‚Ì‘Šè‚ğíœ‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H"
 '   Controls
 Public Const msgSureToAllClear As String = "‚·‚×‚ÄƒNƒŠƒA‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H"
 Public Const msgDoesOpenLog As String = "ƒƒO‚ª‚ ‚è‚Ü‚·BŠJ‚«‚Ü‚·‚©H"
 Public Const msgNoChange As String = "•ÏX‚Í‚ ‚è‚Ü‚¹‚ñB"
 '   List
-Public Const msgClearList As String = "ƒŠƒXƒg‚ğƒNƒŠƒA‚µ‚Ä‚¢‚Ü‚·B"
-
-
-
+Public Const msgClearList As String = "ƒŠƒXƒg {0} ‚ğƒNƒŠƒA‚µ‚Ä‚¢‚Ü‚·B"
 

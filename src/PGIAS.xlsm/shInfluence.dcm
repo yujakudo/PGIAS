@@ -47,7 +47,7 @@ Private Sub makeStrength()
     Set celStr = Range(R_TypeSynonym).Offset(-1, 0)
     For i = 1 To typesNum()
         For j = 1 To typesNum()
-            mark = Range(R_InterTypeInflu).cells(i, j).Text
+            mark = Range(R_InterTypeInflu).cells(i, j).text
             idx = InStr(marks, mark)
             If mark <> "" And idx Then
                 idx = idx - 1
@@ -62,7 +62,7 @@ Private Sub makeStrength()
         Next
     Next
     For idx = 0 To 2
-        celStr.Offset(i, idx + 1).Value = ""
+        celStr.Offset(i, idx + 1).value = ""
     Next
 End Sub
 
@@ -81,7 +81,7 @@ Private Sub makeWeatherTable()
         '   インデックスと色のハッシュの作成と、タイプ格納配列の準備
         For i = 1 To num
             With .cells(i, 1)
-                hash.item(.Text) = Array(i, .Font.Color)
+                hash.item(.text) = Array(i, .Font.Color)
             End With
             types(i) = arr
             ti(i) = 0
@@ -92,7 +92,7 @@ Private Sub makeWeatherTable()
         '   タイプごとに天候を得て格納。色付けしながら
         For i = 1 To typesNum()
             With .cells(i, 1)
-                stype = .Text
+                stype = .text
                 .Font.Color = hash.item(stype)(1)
             End With
             idx = hash.item(stype)(0)
@@ -103,7 +103,8 @@ Private Sub makeWeatherTable()
     With Range(R_WeatherTable)
         For i = 1 To num
             types(i)(ti(i)) = 0
-            Call setTypeToCell(types(i), .cells(i, 2))
+            Call setTypeToCell(types(i), .cells(i, 3))
+            .cells(i, 2).Font.Color = hash.item(.cells(i, 1).text)(1)
         Next
     End With
 End Sub

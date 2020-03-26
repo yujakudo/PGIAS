@@ -18,8 +18,8 @@ End Sub
 
 '   入力項目をクリアする
 Private Sub clearInputs()
-    Range(R_SpeciesMapTypeSelect).Value = ""
-    Range(R_SpeciesMapSpeciesSelect).Value = ""
+    Range(R_SpeciesMapTypeSelect).value = ""
+    Range(R_SpeciesMapSpeciesSelect).value = ""
 End Sub
 
 '   マップの初期化ボタン
@@ -31,11 +31,20 @@ End Sub
 
 '   タイプ選択・種族選択のセルの変更
 Private Sub Worksheet_Change(ByVal Target As Range)
-    Call doMacro("チャートを設定しています。")
-    '   変更されたセルのチェックは関数内にて
-    Call CheckEmpasis(Target, ChartObjects(1), _
-                R_SpeciesMapTypeSelect, R_SpeciesMapSpeciesSelect)
-    Call doMacro
+    Dim stype As Variant
+    Dim rngType, rngSelect As Range
+    
+    Set rngType = Range(R_SpeciesMapTypeSelect)
+    Set rngSelect = Range(R_SpeciesMapSpeciesSelect)
+    '   タイプ選択・個体選択のセルの変更
+    If Not Application.Intersect(Target, Union(rngType, rngSelect)) _
+                                        Is Nothing Then
+        Call doMacro(msgSettingMap)
+        '   タイプ、個体選択を渡してマーカー設定
+        stype = getTypesFromRange(rngType)
+        Call setMarker(ChartObjects(1), stype, rngSelect.text)
+        Call doMacro
+    End If
 End Sub
 
 
@@ -65,4 +74,5 @@ Public Sub MakeSpeciesMap()
                         Nothing, Nothing, settings(C_LabelAlign))
     Call setAxisLabel(cho, settings(C_XAxis), settings(C_YAxis))
 End Sub
+
 

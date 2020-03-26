@@ -19,17 +19,17 @@ Private Sub btnShowMap_Click()
     Dim stype As Variant
     species = getSpeciesFromCell(ActiveCell)
     If species = "" Then Exit Sub
-    If chkSameType.Value Then
+    If chkSameType.value Then
         stype = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2))
         enableEvent False
         With shSpeciesMap.Range(R_SpeciesMapTypeSelect)
-            .cells(1, 1).Value = stype(0)
-            .cells(1, 2).Value = stype(1)
+            .cells(1, 1).value = stype(0)
+            .cells(1, 2).value = stype(1)
         End With
         enableEvent True
     End If
     shSpeciesMap.Activate
-    shSpeciesMap.Range(R_SpeciesMapSpeciesSelect).Value = species
+    shSpeciesMap.Range(R_SpeciesMapSpeciesSelect).value = species
 End Sub
 
 '   Ží‘°ƒe[ƒuƒ‹‚Ì’²®
@@ -52,11 +52,11 @@ Private Sub sortType()
         For row = 1 To .rows.count
             Set cel(0) = .cells(row, col(0))
             Set cel(1) = .cells(row, col(1))
-            ti(0) = getTypeIndex(cel(0).Text)
-            ti(1) = getTypeIndex(cel(1).Text)
+            ti(0) = getTypeIndex(cel(0).text)
+            ti(1) = getTypeIndex(cel(1).text)
             If ti(1) > 0 And ti(0) > ti(1) Then
-                cel(0).Value = cel(1).Value
-                cel(1).Value = getTypeName(ti(0))
+                cel(0).value = cel(1).value
+                cel(1).value = getTypeName(ti(0))
             End If
         Next
     End With
@@ -136,8 +136,8 @@ Public Sub AttacksOfDouble()
             ReDim atks(.DataBodyRange.rows.count)
             num = 0
             For Each cel In .ListColumns(ATK_Name).DataBodyRange
-                If InStr(testStr, "," & cel.Text & ",") < 1 Then
-                    atks(num) = cel.Text
+                If InStr(testStr, "," & cel.text & ",") < 1 Then
+                    atks(num) = cel.text
                     num = num + 1
                     idx = num - 2
                     Do While idx >= 0
@@ -148,7 +148,7 @@ Public Sub AttacksOfDouble()
                 End If
             Next
         End With
-        ListObjects(1).DataBodyRange.cells(trow, cols(i)).Value = Join(atks, ",")
+        ListObjects(1).DataBodyRange.cells(trow, cols(i)).value = Join(atks, ",")
     Next
     With ListObjects(1).DataBodyRange
         For Each col In cols
@@ -156,3 +156,4 @@ Public Sub AttacksOfDouble()
         Next
     End With
 End Sub
+

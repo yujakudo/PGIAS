@@ -42,7 +42,7 @@ End Sub
 
 '   基本データのマージインポート
 Private Sub btnMargeImportBasicData_Click()
-    Call MargeImportBasicData(chkOverwriteImport.Value)
+    Call MargeImportBasicData(chkOverwriteImport.value)
 End Sub
 
 '   相関シートの諸表作成
@@ -56,7 +56,7 @@ Private Sub btnAddSpecies_Click()
     Call shSpecies.alignTableSpecies
     Call shClassifiedByType.makeTableClassifiedByType
     Call shSpeciesAnalysis1.addNewSpecies( _
-            chkSpeciesAnaWithLimited.Value)
+            chkSpeciesAnaWithLimited.value)
 End Sub
 
 '   技を追加した
@@ -68,7 +68,7 @@ End Sub
 '   種族分析シートの再作成
 Private Sub btnMakeSpeciesAnalysis_Click()
     Call shSpeciesAnalysis1.makeTableSpeciesAna1( _
-            chkSpeciesAnaWithLimited.Value)
+            chkSpeciesAnaWithLimited.value)
 End Sub
 
 '   非表示列の表示
@@ -78,18 +78,28 @@ End Sub
 
 '   テーブルヘッダのサフィックス表示
 Private Sub chkShowSuffix_Click()
-    Call switchHeaderSuffixes(chkShowSuffix.Value)
+    Call switchHeaderSuffixes(chkShowSuffix.value)
 End Sub
 
 '   Verシートの開発用ボタン
 Private Sub chkVersionHistoryButtons_Click()
-    Call shVersionHistory.EnableButtons(chkVersionHistoryButtons.Value)
+    Call shVersionHistory.EnableButtons(chkVersionHistoryButtons.value)
 End Sub
 
 '   個体シートの再計算
 Private Sub shCalcAllIndividuals_Click()
     Call shIndividual.calcAllIndividualTable
 End Sub
+
+'   全てを更新ボタン todo
+Private Sub btnAllUpdate_Click()
+    Call shIndivMap.MakeMap
+    Call doMacro(msgAllRecalc)
+    Call shGymEffective.calcAll
+    Call doMacro
+    Call shNewEntries.makeNewEntries
+End Sub
+
 
 '   種族・技シートのソート
 Public Sub SortBasicTables()
@@ -173,7 +183,7 @@ End Function
 
 '   わざのシートのコールバック
 Public Function writeCellOfAttack(ByVal args As Variant) As String
-    If args(2)(0) Then args(0).Value = args(1)
+    If args(2)(0) Then args(0).value = args(1)
 End Function
 
 '   種族シートのコールバック
@@ -188,7 +198,7 @@ Public Function margeCellOfSpecies(ByVal args As Variant) As String
             Exit Function
         End If
     Next
-    If args(2)(0) Then cel.Value = val
+    If args(2)(0) Then cel.value = val
 End Function
 
 '   技のセルのマージ
@@ -201,11 +211,11 @@ Private Function margeAttacks(ByVal cel As Range, ByVal newVal As String, _
         margeAttacks = "-"
         Exit Function
     End If
-    atks = Split(cel.Text, ",")
+    atks = Split(cel.text, ",")
     lim = UBound(atks)
     newAtks = Split(newVal, ",")
     ReDim Preserve atks(lim + UBound(newAtks) + 1)
-    testStr = "," & cel.Text & ","
+    testStr = "," & cel.text & ","
     For Each item In newAtks
         If InStr(testStr, "," & item & ",") < 1 Then
             If slog <> "" Then slog = slog & ","
@@ -223,7 +233,7 @@ Private Function margeAttacks(ByVal cel As Range, ByVal newVal As String, _
             End If
         End If
     Next
-    If overwrite Then cel.Value = Join(atks, ",")
+    If overwrite Then cel.value = Join(atks, ",")
     If slog <> "" Then
         margeAttacks = "Added " & slog
     Else
@@ -267,35 +277,50 @@ Public Sub AllClear(Optional ByVal comfirm As Boolean = True)
     If comfirm Then
         If vbOK <> MsgBox(msgSureToAllClear, vbOKCancel) Then Exit Sub
     End If
+    '   各シートの初期化関数
     Call doMacro(msgstr(msgProcessing, Array(msgAllSheet, msgClear)))
     Call SortBasicTables                '   種族・技のソートとリセット
     Call shSpeciesMap.ResetSpeciesMap   '   種族マップのリセット
     Call shIndividual.ClearData         '   個体シートのクリア
-    Call shIndivMap.ClearIndivMap       '   個体マップのクリア
-    Call onRemoveRankingClick(shGymEffective, True, True, False)  '   ジムのクリア
-    Call onRemoveRankingClick(shMatchEffective, True, True, False) '   対戦のクリア
-    Call shNewEntries.ClearNewEntries   '   期待個体のクリア
+    Call shIndivMap.initSheet           '   個体マップの初期化
+    Call shCounter.initSheet         '   対策シートの初期化
+    Call shCounting.clearAll          '   集計のクリア
+    Call shList.clearAllList            '   リストクリア
     Call doMacro
+    '   すべてのシート
     For Each sh In Worksheets
-        sh.Activate
-        If sh.ListObjects.count > 0 Then
-            With sh.ListObjects(1)
-                If Not .DataBodyRange Is Nothing Then
-                    Application.Goto .DataBodyRange.cells(1, 1)
-                Else
-                    Application.Goto .HeaderRowRange.cells(1, 1).Offset(1, 0)
-                End If
-            End With
-        ElseIf Not sh Is shLicenseAgreement Then
-            Application.Goto sh.cells(1, 1), True
+        If InStr(sh.name, "_") > 0 Then
+            '   コピーしたシートは削除
+            sh.Delete
+        Else
+            '   オリジナルのシートであれば、スクロール・カーソル位置をリセット
+            sh.Activate
+            If sh.ListObjects.count > 0 Then
+                With sh.ListObjects(1)
+                    If Not .DataBodyRange Is Nothing Then
+                        Application.Goto .DataBodyRange.cells(1, 1)
+                    Else
+                        Application.Goto .HeaderRowRange.cells(1, 1).Offset(1, 0)
+                    End If
+                End With
+            ElseIf Not sh Is shLicenseAgreement Then
+                Application.Goto sh.cells(1, 1), True
+            End If
+            '   拡大率
+            If InStr(sh.name, C_Map) > 0 Then
+                ActiveWindow.Zoom = 66
+            Else
+                ActiveWindow.Zoom = 90
+            End If
         End If
     Next
     '   開発用のチェック項目
-    chkShowSuffix.Value = False
+    chkShowSuffix.value = False
     Call chkShowSuffix_Click
-    chkVersionHistoryButtons.Value = False
+    chkVersionHistoryButtons.value = False
     Call chkVersionHistoryButtons_Click
     '   利用許諾のリセット
     Call shLicenseAgreement.ResetLicenseAgreement
     shLicenseAgreement.Activate
 End Sub
+

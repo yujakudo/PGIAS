@@ -15,7 +15,7 @@ Private Sub chkAgree_Click()
     prev = Application.ScreenUpdating
     Application.ScreenUpdating = False
     For i = 1 To Worksheets.count
-        Worksheets(i).Visible = chkAgree.Value Or isOpenSheet(i)
+        Worksheets(i).visible = chkAgree.value Or isOpenSheet(i)
     Next
     Application.ScreenUpdating = prev
 End Sub
@@ -38,7 +38,8 @@ End Function
 '   利用許諾契約のリセット
 Public Sub ResetLicenseAgreement()
     Dim i As Long
-    chkAgree.Value = False
+    chkAgree.value = False
     Call chkAgree_Click
 End Sub
+
 

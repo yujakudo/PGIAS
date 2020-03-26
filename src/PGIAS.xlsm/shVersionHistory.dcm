@@ -17,8 +17,8 @@ Private Sub btnNewArticle_Click()
     With ListObjects(1)
         .ListRows.Add (1)
         With .DataBodyRange
-            getColumn(VH_Branch, .cells(1, 1)).Value = settings(GS_BranchName)
-            getColumn(VH_Date, .cells(1, 1)).Value = Now
+            getColumn(VH_Branch, .cells(1, 1)).value = settings(GS_BranchName)
+            getColumn(VH_Date, .cells(1, 1)).value = Now
         End With
     End With
 End Sub
@@ -66,3 +66,4 @@ Private Sub ReleaseFile()
             xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False
     Next
 End Sub
+

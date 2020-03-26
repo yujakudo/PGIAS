@@ -48,7 +48,7 @@ End Function
 
 '   弱点・耐性の表を作る
 Private Sub makeWeakness(ByRef idx2row As Variant)
-    Dim num, weakCol, row, ti1, ti2, atici, i As Long
+    Dim num, weakCol, row, ti1, ti2, ati, ci, i As Long
     Dim types As Variant
     Dim ind(1) As Long
     Dim weak(), alst() As Long
@@ -89,7 +89,7 @@ Private Sub makeWeakness(ByRef idx2row As Variant)
 End Sub
 
 '   相性の係数を分類する
-Private Function classifyFactor(ByVal fctr As Double) As Long
+Public Function classifyFactor(ByVal fctr As Double) As Integer
     Dim ic As Integer
     classifyFactor = 0
     ic = Int(fctr * 100)
@@ -126,29 +126,29 @@ Private Sub makeSpecies(ByRef idx2row As Variant)
     stypeCol = getColumnIndex(SPEC_Type1, shSpecies)
     For idx = 1 To shSpecies.ListObjects(1).DataBodyRange.rows.count
         With shSpecies.ListObjects(1).DataBodyRange
-            sname = .cells(idx, snameCol).Text
-            type1 = getTypeIndex(.cells(idx, stypeCol).Text)
-            type2 = getTypeIndex(.cells(idx, stypeCol + 1).Text)
+            sname = .cells(idx, snameCol).text
+            type1 = getTypeIndex(.cells(idx, stypeCol).text)
+            type2 = getTypeIndex(.cells(idx, stypeCol + 1).text)
         End With
         If type2 <> 0 And type2 < type1 Then
             tmp = type2: type2 = type1: type1 = tmp
         End If
         row = idx2row(type1, type2)
-        If cells(row, tmpCol).Text = "" Then
+        If cells(row, tmpCol).text = "" Then
             col = tmpCol
-        ElseIf cells(row, tmpCol + 1).Text = "" Then
+        ElseIf cells(row, tmpCol + 1).text = "" Then
             col = tmpCol + 1
         Else
             col = cells(row, tmpCol).End(xlToRight).column + 1
         End If
-        cells(row, col).Value = sname
-        cells(row, numCol).Value = cells(row, numCol).Value + 1
+        cells(row, col).value = sname
+        cells(row, numCol).value = cells(row, numCol).value + 1
     Next
     '   ソートと、いらない行の削除
     cnt = 0
     row = 2
-    While cells(row, 1).Text <> ""
-        num = cells(row, numCol).Value
+    While cells(row, 1).text <> ""
+        num = cells(row, numCol).value
         If num > 0 Then
             cnt = cnt + num
             Set rng = Range(cells(row, tmpCol), cells(row, tmpCol + num - 1))
@@ -158,17 +158,17 @@ Private Sub makeSpecies(ByRef idx2row As Variant)
             str = ""
             For col = 1 To rng.count
                 If str <> "" Then str = str & ","
-                str = str + rng.cells(1, col).Text
+                str = str + rng.cells(1, col).text
             Next
             rng.ClearContents
-            cells(row, lstCol).Value = str
+            cells(row, lstCol).value = str
 
             row = row + 1
         Else
             cells(row, tmpCol).EntireRow.Delete
         End If
     Wend
-    cells(1, lstCol + 2).Value = cnt
+    cells(1, lstCol + 2).value = cnt
 End Sub
 
 '   ヘッダの作成
@@ -179,8 +179,9 @@ Private Sub makeHeader()
                     CBT_SingleToler, CBT_DoubleToler, CBT_OverToler, _
                     CBT_NumOfSpecies, CBT_Species)
     For col = 1 To UBound(header)
-        cells(1, col).Value = header(col)
+        cells(1, col).value = header(col)
     Next
 End Sub
+
 
 

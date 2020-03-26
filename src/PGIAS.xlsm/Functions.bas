@@ -38,7 +38,7 @@ Public Function getTypeName(ByVal no As Integer) As String
     getTypeName = ""
     With Range(R_Type)
         If 0 < no And no <= .rows.count Then
-            getTypeName = .cells(no, 1).Text
+            getTypeName = .cells(no, 1).text
         End If
     End With
 End Function
@@ -48,7 +48,7 @@ Public Function getTypeSynonym(ByVal no As Integer) As String
     getTypeSynonym = ""
     With Range(R_TypeSynonym)
         If 0 < no And no <= .rows.count Then
-            getTypeSynonym = .cells(no, 1).Text
+            getTypeSynonym = .cells(no, 1).text
         End If
     End With
 End Function
@@ -71,12 +71,6 @@ Public Function getTypeIndex(ByVal str As String) As Integer
 Err:
 End Function
 
-Public Function getWeatherIndex(ByVal str As String) As Integer
-    On Error GoTo Err
-    getWeatherIndex = WorksheetFunction.Match(str, Range(R_WeatherTable).columns(1), 0)
-Err:
-End Function
-
 '   タイプの全数
 Public Function typesNum() As Long
     typesNum = Range(R_Type).cells.count
@@ -91,9 +85,60 @@ Public Function getTypeArray() As Variant
     Set types = Range(R_Type)
     ReDim arr(types.rows.count)
     For row = 1 To types.rows.count
-        arr(row) = types.cells(row, 1).Text
+        arr(row) = types.cells(row, 1).text
     Next
     getTypeArray = arr
+End Function
+
+'   天候の名前或は略号よりインデックスを得る
+Public Function getWeatherIndex(ByVal str As String) As Integer
+    Dim col As Long
+    If Len(str) = 1 Then col = 2 Else col = 1
+    On Error GoTo Err
+    getWeatherIndex = WorksheetFunction.Match(str, Range(R_WeatherTable).columns(col), 0)
+Err:
+End Function
+
+'   天候のインデックスより、名前或は略号を得る
+Public Function getWeatherName(ByVal idx As Integer, _
+                Optional ByVal isSynonym As Boolean = False, _
+                Optional ByVal withColor As Boolean = False) As Variant
+    Dim col, wc As Long
+    Dim wname As String
+    If idx = 0 Then
+        If withColor Then
+            getWeatherName = Array("", 0)
+        Else
+            getWeatherName = ""
+        End If
+        Exit Function
+    End If
+    If isSynonym Then col = 2 Else col = 1
+    With Range(R_WeatherTable).cells(idx, col)
+        wname = .text
+        If withColor Then
+            wc = .Font.Color
+            getWeatherName = Array(wname, wc)
+        Else
+            getWeatherName = wname
+        End If
+    End With
+Err:
+End Function
+
+'   天候の文字列またはインデックスから両方を得る。
+Public Function getWeatherNameAndIndex(ByRef weather As Variant) As String
+    If Not IsNumeric(weather) Then
+        getWeatherNameAndIndex = weather
+        weather = getWeatherIndex(weather)
+    Else
+        getWeatherNameAndIndex = getWeatherName(weather)
+    End If
+End Function
+
+'   天候の全数
+Public Function weathersNum() As Long
+    weathersNum = Range(R_WeatherTable).rows.count
 End Function
 
 '   タイプより種族の候補範囲の取得
@@ -120,7 +165,7 @@ Public Function getListStr(ByVal Target As Excel.Range, ByVal lcol As Long) As S
         row = Target.row
         col = Target.column
         Do While lcol = 0 Or col <= lcol
-            str = .cells(row, col).Text
+            str = .cells(row, col).text
             If str <> "" Then
                 getListStr = getListStr & "," & str
             ElseIf lcol = 0 Then
@@ -208,14 +253,14 @@ Public Function getSpcAttrs(ByVal species As String, _
         If Not IsArray(attrs) Then
             Set getSpcAttrs = CreateObject("Scripting.Dictionary")
             For col = 1 To .HeaderRowRange.count
-                getSpcAttrs.item(.HeaderRowRange.cells(1, col).Text) = _
-                    .DataBodyRange.cells(row, col).Value
+                getSpcAttrs.item(.HeaderRowRange.cells(1, col).text) = _
+                    .DataBodyRange.cells(row, col).value
             Next
         Else
             num = UBound(attrs)
             ReDim vals(num)
             For i = 0 To num
-                vals(i) = .ListColumns(attrs(i)).DataBodyRange.cells(row, 1).Value
+                vals(i) = .ListColumns(attrs(i)).DataBodyRange.cells(row, 1).value
             Next
             getSpcAttrs = vals
         End If
@@ -255,14 +300,14 @@ Public Function getAtkAttrs(ByVal atkClass As Variant, _
         If Not IsArray(attrs) Then
             Set getAtkAttrs = CreateObject("Scripting.Dictionary")
             For col = 1 To .HeaderRowRange.count
-                getAtkAttrs.item(.HeaderRowRange.cells(1, col).Text) = _
-                    .DataBodyRange.cells(row, col).Value
+                getAtkAttrs.item(.HeaderRowRange.cells(1, col).text) = _
+                    .DataBodyRange.cells(row, col).value
             Next
         Else
             num = UBound(attrs)
             ReDim vals(num)
             For i = 0 To num
-                vals(i) = .ListColumns(attrs(i)).DataBodyRange.cells(row, 1).Value
+                vals(i) = .ListColumns(attrs(i)).DataBodyRange.cells(row, 1).value
             Next
             getAtkAttrs = vals
         End If
@@ -273,7 +318,7 @@ End Function
 Public Function weatherBoost(ByVal tp As String) As String
     Dim idx As Long
     idx = getTypeIndex(tp)
-    If idx Then weatherBoost = Range(R_WeatherBoost).cells(idx, 1).Text
+    If idx Then weatherBoost = Range(R_WeatherBoost).cells(idx, 1).text
 End Function
 
 '   天候ブーストの取得（２つ、種族用）
@@ -358,22 +403,40 @@ End Function
 
 '   目標PLの取得
 '   atk, def,hpは現在のPower、PLは現在のPL
-'   種族と個体値から算出版も作るべきか？
 Public Function getPLbyCP(ByVal tCP As Long, ByVal PL As Double, _
             ByVal atk As Double, _
             ByVal def As Double, _
             ByVal hp As Double) As Double
-    Dim cpg, CPM, CPMc, CP, tPL As Double
-    Dim attrs As Variant
+    Dim cpg, CPMc As Double
     If tCP = 0 Or PL = 0 Then Exit Function
     CPMc = getCPM(PL)
     cpg = atk * Sqr(def) * Sqr(hp) / CPMc ^ 2 / 10
+    getPLbyCP = getPLbyCpg(tCP, cpg)
+End Function
+
+'   目標CPよりPLを得る2
+'   atk, def, hpは個体値
+Public Function getPLbyCP2(ByVal tCP As Long, _
+            ByVal species As String, _
+            ByVal atk As Double, _
+            ByVal def As Double, _
+            ByVal hp As Double) As Double
+    Dim attr As Variant
+    Dim cpg As Double
+    attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
+    cpg = (attr(0) + atk) * Sqr(attr(1) + def) * Sqr(attr(2) + hp) / 10
+    getPLbyCP2 = getPLbyCpg(tCP, cpg)
+End Function
+
+'   CPG((種族値＋個体値)の重み積/10)よりPLを得る
+Private Function getPLbyCpg(ByVal tCP As Long, ByVal cpg As Double) As Double
+    Dim CPM, tPL As Double
     CPM = Sqr((tCP + 1) / cpg)
     tPL = getPLbyCPM(CPM, True)
     If getCPM(tPL) >= CPM Then tPL = tPL - 0.5
     If tPL < 1 Then tPL = 1
     If tPL > 40 Then tPL = 40
-    getPLbyCP = tPL
+    getPLbyCpg = tPL
 End Function
 
 '空白チェック
@@ -475,6 +538,7 @@ Public Function getPLbyCPM(ByVal CPM As Double, _
         i = 3
     End If
     getPLbyCPM = (CPM ^ 2 - CPMK(i)(0)) / CPMK(i)(1)
+    If getPLbyCPM < 0 Then getPLbyCPM = 0
     If align Then
         getPLbyCPM = Int(getPLbyCPM * 2 + 0.5) / 2
     End If
@@ -596,7 +660,7 @@ Public Function setAtkNames(ByVal atkClass As Variant, ByVal atkNames As Variant
     ReDim items(UBound(atkNames), 3)
     For i = 0 To UBound(atkNames)
         name = Trim(atkNames(i))
-        ti = getTypeIndex(getAtkAttr(atkClass, name, C_TYPE))
+        ti = getTypeIndex(getAtkAttr(atkClass, name, C_Type))
         If line <> "" Then line = line & ","
         items(i, 1) = Len(line) + 1
         items(i, 2) = Len(name)
@@ -611,11 +675,12 @@ Public Function writeColoredStr(ByVal Target As Excel.Range, _
                     ByVal str As String, ByVal info As Variant)
     Dim i As Long
     With Target
-        .Value = str
+        .value = str
         For i = 0 To UBound(info, 1)
             If info(i, 1) < 1 Then Exit For
             .Characters(start:=info(i, 1), Length:=info(i, 2)).Font.Color = info(i, 3)
         Next
+        .Font.Size = 10
     End With
 End Function
 
@@ -633,7 +698,7 @@ Function getColorForSpecies(ByVal species As String) As Variant
         c(0) = cell.Font.Color
         c(1) = c(0)
         With cell.Offset(0, 1)
-            If .Text <> "" Then c(1) = .Font.Color
+            If .text <> "" Then c(1) = .Font.Color
         End With
     End With
     getColorForSpecies = c
@@ -656,3 +721,86 @@ Public Function getGlobalSettings()
     Set getGlobalSettings = getSettings(R_GlobalSettings, xlVertical)
 End Function
 
+'   セルに天候のセット
+Public Function setWeatherToCell(ByVal cel As Range, _
+                Optional ByVal weather As Variant = -1) As Integer
+    Dim sWeather As String
+    Dim clr As Long
+    If weather = -1 Then
+        sWeather = cel.text
+        weather = getWeatherIndex(sWeather)
+    Else
+        sWeather = getWeatherNameAndIndex(weather)
+        cel.value = sWeather
+    End If
+    If weather > 0 Then
+        cel.Font.Color = Range(R_WeatherTable).cells(weather, 1).Font.Color
+    Else
+        cel.Font.Color = 0
+    End If
+    setWeatherToCell = weather
+End Function
+
+'   自動目標（リーグ名）によるCP上限の取得
+Public Function getCpUpper(ByVal mode As String, _
+                    Optional ByVal undefVal As Long = C_MaxLong) As Long
+    getCpUpper = undefVal
+    If mode = C_League1 Then
+        getCpUpper = C_UpperCPl1
+    ElseIf mode = C_League2 Then
+        getCpUpper = C_UpperCPl2
+    End If
+End Function
+
+'   自動目標に伴う設定の取得
+Public Function getAutoTargetSettings(ByVal mode As String) As Object
+    Dim subset As Object
+    Set subset = CreateObject("Scripting.Dictionary")
+    If mode = C_None Or mode = "" Then Exit Function
+    If mode = C_League1 Or mode = C_League2 Or mode = C_League3 Then
+        subset.item(C_YAxis) = left(IND_MtcSpecialAtk1CDPS, Len(IND_MtcSpecialAtk1CDPS) - 1) & "*"
+        subset.item(C_YPrediction) = IND_prMtcCDPS
+        subset.item(C_CpUpper) = getCpUpper(mode, 0)
+        If subset(C_CpUpper) > 0 Then
+            subset.item(C_PrCpLower) = subset(C_CpUpper) - 300
+        Else    '   League3
+            subset.item(C_CpUpper) = ""
+            subset.item(C_PrCpLower) = 2800
+        End If
+        
+        subset.item(C_SimMode) = C_Match
+        subset.item(C_SelfAtkDelay) = 0
+        subset.item(C_EnemyAtkDelay) = 0
+        subset.item(CR_SetRankNum) = 5
+        subset.item(CR_SetRankVar) = C_KTR
+    Else
+        subset.item(C_YAxis) = left(IND_GymSpecialAtk1CDPS, Len(IND_GymSpecialAtk1CDPS) - 1) & "*"
+        subset.item(C_YPrediction) = IND_prGymCDPS
+        subset.item(C_CpUpper) = ""
+        subset.item(C_PrCpLower) = 2000
+    
+        subset.item(C_SimMode) = C_Gym
+        subset.item(C_SelfAtkDelay) = 0.1
+        subset.item(C_EnemyAtkDelay) = 2
+        subset.item(CR_SetRankNum) = 6
+        subset.item(CR_SetRankVar) = C_KT
+    End If
+    '   対策シート項目
+    subset.item(CR_DefCpUpper) = subset.item(C_CpUpper)
+    subset.item(CR_DefCpLower) = subset.item(C_PrCpLower)
+    Set getAutoTargetSettings = subset
+End Function
+
+'   アメと星の砂の必要量
+Public Function getResourceRequirment(ByVal curPL As Double, _
+                ByVal prPL As Double) As Variant
+    Dim candies, sands As Long
+    Dim cel As Variant
+    For Each cel In shCpm.ListObjects(1).ListColumns("PL").DataBodyRange
+        If curPL < cel.value And cel.value <= prPL Then
+            sands = sands + cel.Offset(0, 2).value
+            candies = candies + cel.Offset(0, 3).value
+        End If
+    Next
+    getResourceRequirment = Array(candies, sands)
+End Function

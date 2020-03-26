@@ -7,3 +7,6 @@ bin/
 ~*.*
 *コピー.*
 PGIAS_v*.xlsm
+src/PGIAS.xlsm/shReffer.dcm
+src/PGIAS.xlsm/shCounter*.dcm
+src/PGIAS.xlsm/shIndivMap*.dcm

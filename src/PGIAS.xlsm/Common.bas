@@ -25,7 +25,8 @@ Public Function getColumn(ByVal cname As String, ByVal cel As Range) As Range
     End With
     Exit Function
 Err:
-    MsgBox msgstr(msgColumnDoesNotExistOnTable, Array(cel.ListObject.name, cname))
+    If Not cel.ListObject Is Nothing Then _
+        MsgBox msgstr(msgColumnDoesNotExistOnTable, Array(cel.ListObject.name, cname))
 End Function
 
 '   テーブル上の、列タイトルより列番号を得る
@@ -48,7 +49,7 @@ Public Function getColumnIndexes(ByVal table As Variant, _
         Set getColumnIndexes = CreateObject("Scripting.Dictionary")
         With getListObject(table).HeaderRowRange
             For col = 1 To .count
-                getColumnIndexes.item(.cells(1, col).Text) = col
+                getColumnIndexes.item(.cells(1, col).text) = col
             Next
         End With
     Else
@@ -89,15 +90,15 @@ Public Function getRowValues(ByVal cel As Range, _
                 colLimit(1) = getColumnIndex(colLimit(1), cel)
             End If
             For col = colLimit(0) To colLimit(1)
-                getRowValues.item(.HeaderRowRange.cells(1, col).Text) = _
-                    .DataBodyRange.cells(row, col).Value
+                getRowValues.item(.HeaderRowRange.cells(1, col).text) = _
+                    .DataBodyRange.cells(row, col).value
             Next
         Else
             dataNum = UBound(attrs)
             ReDim val(dataNum)
             On Error GoTo Err
             For i = 0 To dataNum
-                val(i) = .ListColumns(attrs(i)).DataBodyRange.cells(row, 1).Value
+                val(i) = .ListColumns(attrs(i)).DataBodyRange.cells(row, 1).value
             Next
             On Error GoTo 0
             getRowValues = val
@@ -136,14 +137,14 @@ Public Function seachAndGetValues(ByVal key As Variant, ByVal column As Variant,
             seachAndGetValues = CreateObject("Scripting.Dictionary")
             For col = 1 To .DataBodyRange.columns.count
                 seachAndGetValues.item(.HeaderRowRange.cells(1, col)) = _
-                    .DataBodyRange.cells(row, col).Value
+                    .DataBodyRange.cells(row, col).value
             Next
         Else
             dataNum = UBound(attrs)
             ReDim val(dataNum)
             On Error GoTo Err
             For i = 0 To dataNum
-                val(i) = .ListColumns(attrs(i)).DataBodyRange.cells(row, 1).Value
+                val(i) = .ListColumns(attrs(i)).DataBodyRange.cells(row, 1).value
             Next
             On Error GoTo 0
             seachAndGetValues = val
@@ -156,7 +157,7 @@ End Function
 
 
 '   指定列範囲の値を得る
-Function getSettings(ByVal rng As Variant, _
+Public Function getSettings(ByVal rng As Variant, _
                 Optional orientation As XlOrientation = xlHorizontal, _
                 Optional idx As Integer = 0) As Object
     Dim row, col As Long
@@ -165,16 +166,59 @@ Function getSettings(ByVal rng As Variant, _
     With rng
         If orientation = xlHorizontal Then
             For col = 1 To .columns.count
-                getSettings.item(.cells(1, col).Text) = .cells(2 + idx, col).Value
+                Call setSettingValue(getSettings, _
+                        .cells(1, col).text, .cells(2 + idx, col))
             Next
             Exit Function
         Else
             For row = 1 To .rows.count
-                getSettings.item(.cells(row, 1).Text) = .cells(row, 2 + idx).Value
+                Call setSettingValue(getSettings, _
+                        .cells(row, 1).text, .cells(row, 2 + idx).value)
             Next
         End If
     End With
 End Function
+
+Private Sub setSettingValue(ByRef settings As Object, ByVal key As String, _
+                    ByVal value As Variant)
+    If right(key, 2) = "_b" Then
+        If IsNumeric(value) Then
+            If value Then value = True Else value = False
+        Else
+            value = LCase(value)
+            If value = "on" Or value = "true" Then value = True Else value = False
+        End If
+    End If
+    settings(key) = value
+End Sub
+
+Public Sub setSettings(ByVal rng As Variant, _
+                    ByRef settings As Object, _
+            Optional orientation As XlOrientation = xlHorizontal, _
+            Optional idx As Integer = 0)
+    Dim row, col As Long
+    Dim key As String
+    If settings Is Nothing Then Exit Sub
+    If Not IsObject(rng) Then Set rng = Range(rng)
+    With rng
+        If orientation = xlHorizontal Then
+            For col = 1 To .columns.count
+                key = .cells(1, col).text
+                If settings.exists(key) Then
+                    .cells(2 + idx, col).value = settings(key)
+                End If
+            Next
+            Exit Sub
+        Else
+            For row = 1 To .rows.count
+                key = .cells(row, 1).text
+                If settings.exists(key) Then
+                    .cells(row, 2 + idx).value = settings(key)
+                End If
+            Next
+        End If
+    End With
+End Sub
 
 '   マクロ高速化
 Function doMacro(Optional ByVal comment As String = "", _
@@ -210,11 +254,12 @@ Function doMacro(Optional ByVal comment As String = "", _
     End If
 End Function
 
+'   強制リセット
 Public Sub a_resetDoMacro()
     Call doMacro(, , True)
 End Sub
 
-
+'   イベントの有効/無効
 Sub enableEvent(Optional ByVal enable As Boolean = True)
     Static ee As Boolean
     If Not enable Then
@@ -356,7 +401,7 @@ Public Sub loadCsv(ByVal fh As Variant, ByVal cell As Range, _
         words = splitLine(line)
         For i = 0 To UBound(words)
             If colHead(i) Then
-                cell.Offset(0, colHead(i) - 1).Value = words(i)
+                cell.Offset(0, colHead(i) - 1).value = words(i)
             End If
         Next
         Set cell = cell.Offset(1, 0)
@@ -375,7 +420,7 @@ Private Function joinRow(ByVal rng As Range, _
         With rng.Areas(ai)
             For col = 1 To .columns.count
                 If joinRow <> "" Then joinRow = joinRow & ","
-                joinRow = joinRow & """" & .cells(row, col).Text & """"
+                joinRow = joinRow & """" & .cells(row, col).text & """"
             Next
         End With
     Next
@@ -426,7 +471,7 @@ Public Function margeCsv(ByVal fh As Variant, ByVal cell As Range, _
     End If
     '   キー列タイトルの列インデックス（0から）とデータインデックス
     For i = 0 To UBound(colHead)
-        If head.cells(1, colHead(i)).Value = key Then
+        If head.cells(1, colHead(i)).value = key Then
             keycol = colHead(i) - 1
             keyidx = i
             Exit For
@@ -448,7 +493,7 @@ Public Function margeCsv(ByVal fh As Variant, ByVal cell As Range, _
             If Not isTest Then
                 For i = 0 To UBound(words)
                     If colHead(i) Then
-                        cel.Offset(0, colHead(i) - 1).Value = words(i)
+                        cel.Offset(0, colHead(i) - 1).value = words(i)
                     End If
                 Next
             End If
@@ -460,7 +505,7 @@ Public Function margeCsv(ByVal fh As Variant, ByVal cell As Range, _
             diff = ""
             For i = 0 To UBound(words)
                 If colHead(i) Then
-                    oldVal = cel.Offset(0, colHead(i) - 1).Value
+                    oldVal = cel.Offset(0, colHead(i) - 1).value
                     If IsNumeric(words(i)) Then newVal = val(words(i)) Else newVal = words(i)
                     If oldVal <> newVal Then
                         slog = ""
@@ -473,7 +518,7 @@ Public Function margeCsv(ByVal fh As Variant, ByVal cell As Range, _
                         End If
                         If slog <> "-" Then
                             If diff <> "" Then diff = diff & ","
-                            diff = diff & head.cells(1, colHead(i)).Text _
+                            diff = diff & head.cells(1, colHead(i)).text _
                                     & "(" & slog & ")"
                         End If
                     End If
@@ -549,3 +594,51 @@ Public Function msgstr(ByVal s As String, ByVal var As Variant) As String
     Next
     msgstr = s
 End Function
+
+'   名前の定義からシートの取得
+Public Function getSheetsByName(ByVal name As String)
+    Dim sh, sheets() As Worksheet
+    Dim num As Integer
+    ReDim sheets(Worksheets.count)
+    For Each sh In Worksheets
+        If checkNameInSheet(sh, name) Then
+            Set sheets(num) = sh
+            num = num + 1
+        End If
+    Next
+    ReDim Preserve sheets(num - 1)
+    getSheetsByName = sheets
+End Function
+
+Private Function checkNameInSheet(ByVal sh As Worksheet, _
+                        ByVal name As String) As Boolean
+    Dim rng As Range
+    On Error GoTo Err
+    Set rng = sh.Range(name)
+    checkNameInSheet = True
+    Exit Function
+Err:
+    checkNameInSheet = False
+End Function
+
+'   時間文字列の取得
+Public Function getTimeStr(ByVal stime As Long, _
+                Optional ByVal delimiter As String = ":") As String
+    Dim sec, min, hour As Integer
+    
+    sec = stime Mod 60
+    stime = (stime - sec) / 60
+    min = stime Mod 60
+    hour = (stime - min) / 60
+    If delimiter = ":" Then
+        getTimeStr = right("0" & Trim(hour), 2) & ":" _
+                    & right("0" & Trim(min), 2) & ":" _
+                    & right("0" & Trim(sec), 2)
+    Else
+        If hour > 0 Then getTimeStr = Trim(hour) & "ﾟ"
+        If getTimeStr <> "" Or min > 0 Then getTimeStr = getTimeStr & Trim(min) & "'"
+        getTimeStr = getTimeStr & Trim(sec) & """"
+    End If
+    Trim (min) & "'" & right("0" & Trim(sec), 2) & """"
+End Function
+

@@ -8,75 +8,108 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 
-'   クリアボタン
-Private Sub btnClear_Click()
-    Dim lname As String
-    lname = Range(LI_R_Select).Text
-    If lname = "" Then Exit Sub
-    Call doMacro(msgClearList)
-    Call clearAList(lname)
-    Call doMacro
+'   実行ボタン
+Private Sub btnExecute_Click()
+    Dim lname, cmd As String
+    cmd = Range(LI_R_Command).text
+    lname = Range(LI_R_Select).text
+    If cmd = "" Or lname = "" Then Exit Sub
+    If cmd = LI_CMD_Clear Then
+        Call clearAList(lname)
+    ElseIf cmd = LI_CMD_SetAsRocket Then
+        calcRocketTroupeParams (lname)
+    End If
+    Range(LI_R_Command).value = ""
 End Sub
 
 '   （ロケット団を除く）リスト全てをクリア
 Public Sub clearAllList()
     Dim i As Integer
-    Call doMacro(msgClearList)
     For i = 2 To shList.ListObjects.count
         Call clearAList(i)
     Next
-    Call doMacro
+End Sub
+
+'   選択変更
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+    Dim lst As String
+    '   コマンド名連結
+    lst = LI_CMD_Clear & "," & LI_CMD_SetAsRocket
+    Call setInputList
+    If Target.Address = Range(LI_R_Command).Address Then
+        Target.Validation.Delete
+        Target.Validation.Add Type:=xlValidateList, Formula1:=lst
+    End If
 End Sub
 
 '   シートの変更
 Private Sub Worksheet_Change(ByVal Target As Range)
-    If Target.row > 1 Then Exit Sub
-    If Target.column < Range(LI_R_Select).column And _
+    Dim tcol As String
+    '   リストのタイトル（左上）の変更
+    If Target.row = 1 And Target.column < Range(LI_R_Select).column And _
         Target.column Mod (ListObjects(1).HeaderRowRange.count + 1) = 1 Then
             Call changeTitle
+            Exit Sub
+    End If
+    If Target.ListObject Is Nothing Then Exit Sub
+    tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).text
+    If tcol = LI_Species Then
+        Call speciesExpectation(Target)
+    ElseIf tcol = LI_HP Then
+        Call checkHPValue(Target)
     End If
 End Sub
-
-'   ロケット団のパラメータ設定ボタン
-Private Sub btnCalcRocketParams_Click()
-    Call calcRocketTroupeParams
-End Sub
-
-'   ListObjectを得る。
-'   identifierは番号か、テーブルの上左のタイトル文字列
-Private Function getLo(ByVal identifier As Variant) As ListObject
-    Dim i As Integer
-    If IsNumeric(identifier) Then
-        Set getLo = ListObjects(identifier)
-        Exit Function
-    End If
-    For i = 1 To ListObjects.count
-        If ListObjects(i).HeaderRowRange.cells(1, 1).Offset(-1, 0).Text = identifier Then
-            Set getLo = ListObjects(i)
-            Exit Function
-        End If
-    Next
-End Function
 
 '   リストのタイトルが変わった
 Private Sub changeTitle()
-    Dim i As Integer
     Dim lst As String
-    For i = 1 To ListObjects.count
-        If lst <> "" Then lst = lst & ","
-        lst = lst & ListObjects(i).HeaderRowRange.cells(1, 1).Offset(-1, 0).Text
-    Next
+    lst = Join(getListNames(), ",")
     With Range(LI_R_Select)
         .Validation.Delete
         .Validation.Add Type:=xlValidateList, Formula1:=lst
     End With
 End Sub
 
+'   リスト名の配列の取得
+Public Function getListNames() As Variant
+    Dim i As Integer
+    Dim names() As String
+    With shList
+        ReDim names(.ListObjects.count - 1)
+        For i = 1 To .ListObjects.count
+            names(i - 1) = ListObjects(i).HeaderRowRange.cells(1, 1).Offset(-1, 0).text
+        Next
+    End With
+    getListNames = names
+End Function
+
+'   リストオブジェクトの取得
+Public Function getEnemyList(id As Variant) As ListObject
+    Dim i As Integer
+    Dim name As String
+    Set getEnemyList = Nothing
+    With shList
+        If IsNumeric(id) Then
+            If id > 0 Then Set getEnemyList = .ListObjects(id)
+            Exit Function
+        End If
+        If id = "" Then Exit Function
+        For i = 1 To .ListObjects.count
+            If id = .ListObjects(i).HeaderRowRange.cells(1, 1).Offset(-1, 0).text Then
+                Set getEnemyList = .ListObjects(i)
+                Exit Function
+            End If
+        Next
+    End With
+End Function
+
 '   ロケット団のパラメータ設定
-Private Function calcRocketTroupeParams()
+Private Function calcRocketTroupeParams(ByVal lname As String)
+    Dim lo As ListObject
     Dim cel As Variant
-    Call doMacro(msgstr(msgProcessing, Array(ListObjects(1).name, msgCalculate)))
-    With ListObjects(1).ListColumns(LI_Category)
+    Call doMacro(msgstr(msgProcessing, Array(msgCalculate, lname)))
+    Set lo = getEnemyList(lname)
+    With lo.ListColumns(LI_Category)
         For Each cel In .DataBodyRange
             Call calcRocketSpecies(cel)
         Next
@@ -89,8 +122,8 @@ Private Sub calcRocketSpecies(ByVal cel As Range)
     Dim mem, species As String
     Dim attr As Variant
     Dim CPM As Double
-    mem = cel.Text
-    species = getColumn(LI_Species, cel).Text
+    mem = cel.text
+    species = getColumn(LI_Species, cel).text
     If species = "" Then Exit Sub
     attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
     '   CPM
@@ -104,15 +137,18 @@ Private Sub calcRocketSpecies(ByVal cel As Range)
     attr(0) = (attr(0) + 15) * 2 * CPM
     attr(1) = (attr(1) + 15) * CPM
     attr(2) = ((attr(2) + 15) / 2 - 0.5) * CPM
-    getColumn(LI_ATK, cel).Value = attr(0)
-    getColumn(LI_DEF, cel).Value = attr(1)
-    getColumn(LI_HP, cel).Value = attr(2)
+    getColumn(LI_ATK, cel).value = attr(0)
+    getColumn(LI_DEF, cel).value = attr(1)
+    getColumn(LI_HP, cel).value = attr(2)
 End Sub
 
 Private Sub clearAList(ByVal id As Variant)
-    With getLo(id)
-        .DataBodyRange.ClearContents
+    Call doMacro(msgstr(msgClearList, id))
+    With getEnemyList(id)
+        If Not .DataBodyRange Is Nothing Then .DataBodyRange.ClearContents
         .Resize Range(.HeaderRowRange, .HeaderRowRange.Offset(1, 0))
+        .HeaderRowRange.cells(1, 1).Offset(-1, 0).value = LI_DefaultListName & Trim(id)
     End With
+    Call doMacro
 End Sub
 

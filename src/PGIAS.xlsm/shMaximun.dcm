@@ -17,26 +17,26 @@ Sub makeMaximunValuesTable()
     Dim shname As String
     lrow = cells(rows.count, 1).End(xlUp).row
     For row = 1 To lrow
-        shname = cells(row, 1).Text
+        shname = cells(row, 1).text
         If shname <> "" And shname <> C_Max And shname <> C_Ave Then
-            Call makeATable(shname, cells(row, 2))
+            Call MakeATable(shname, cells(row, 2))
         End If
     Next
 End Sub
 
 '   ç≈ëÂílÇÃï\àÍÇ¬ÇçÏÇÈ
-Private Sub makeATable(ByVal shname As String, ByVal cell As Range)
+Private Sub MakeATable(ByVal shname As String, ByVal cell As Range)
     Dim val As Variant
     Dim r As Range
     With Worksheets(shname)
-        While cell.Text <> ""
+        While cell.text <> ""
             If shname = SH_Individual Then
-                Set r = getIndivColumn(.ListObjects(1), cell.Text)
+                Set r = getIndivColumn(.ListObjects(1), cell.text)
             Else
-                Set r = .ListObjects(1).ListColumns(cell.Text).Range
+                Set r = .ListObjects(1).ListColumns(cell.text).Range
             End If
             val = Application.WorksheetFunction.max(r)
-            cell.Offset(1, 0).Value = val
+            cell.Offset(1, 0).value = val
             Set cell = cell.Offset(0, 1)
         Wend
     End With
@@ -69,7 +69,7 @@ Sub replaceFormulaOfMaximunValuesTable()
     Dim shname As String
     lrow = cells(rows.count, 1).End(xlUp).row
     For row = 1 To lrow
-        shname = cells(row, 1).Text
+        shname = cells(row, 1).text
         If shname <> "" And shname <> C_Max And shname <> C_Ave Then
             Call replaceATable(shname, cells(row, 2))
         End If
@@ -83,11 +83,11 @@ Private Sub replaceATable(ByVal shname As String, ByVal cell As Range)
     Dim tblName As String
     With Worksheets(shname)
         tblName = .ListObjects(1).name
-        While cell.Text <> ""
+        While cell.text <> ""
             If shname = shIndividual.name Then
-                r = getIndivFormula(.ListObjects(1), cell.Text)
+                r = getIndivFormula(.ListObjects(1), cell.text)
             Else
-                r = tblName & "[" & cell.Text & "]"
+                r = tblName & "[" & cell.text & "]"
             End If
             cell.Offset(1, 0).Formula = "=Max(" & r & ")"
             cell.Offset(2, 0).Formula = "=Average(" & r & ")"
@@ -116,5 +116,6 @@ Private Function getIndivFormula(ByVal lst As ListObject, ByVal colName As Strin
         End If
     End With
 End Function
+
 
 

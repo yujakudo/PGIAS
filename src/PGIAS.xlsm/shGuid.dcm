@@ -14,7 +14,7 @@ Private Enum LC
     H5 = 4
     ULI = 10
     TR = 20
-    Text = 100
+    text = 100
 End Enum
 
 
@@ -28,24 +28,24 @@ Public Sub ExportText()
     If fh < 0 Then Exit Sub
     cel = Array(Nothing, Nothing)
     lrow = cells(rows.count, 2).End(xlUp).row
-    If cells(1, 1).Text <> "" Then Print #fh, "# " & cells(1, 1).Text
+    If cells(1, 1).text <> "" Then Print #fh, "# " & cells(1, 1).text
     row = 2
     While row <= lrow
         ct = getCategory(row, cel)
         If LC.H2 <= ct And ct <= LC.H5 Then
-            Print #fh, String(ct + 1, "#") & " " & cel(1).Text
+            Print #fh, String(ct + 1, "#") & " " & cel(1).text
             row = row + 1
             nct = 0
         ElseIf ct = LC.ULI Then
             nct = inListItem(fh, row, cel)
         ElseIf ct = LC.TR Then
             nct = inTableRow(fh, row, cel)
-        ElseIf ct = LC.Text Then
+        ElseIf ct = LC.text Then
             nct = inParagraph(fh, row, cel)
         Else
             row = row + 1
             nct = getCategory(row, cel)
-            If nct = LC.Text And pre = LC.Text Then
+            If nct = LC.text And pre = LC.text Then
                 Print #fh, " "
             Else
                 Print #fh, ""
@@ -63,26 +63,26 @@ Private Function inParagraph(ByVal fh As Integer, ByRef row As Long, _
     Dim cont As Boolean
     ncel = Array(Nothing, Nothing)
     Call indent(fh, lvl)
-    Print #fh, LTrim(cel(0).Text);
+    Print #fh, LTrim(cel(0).text);
     cont = True
     row = row + 1
     Do
         nct = getCategory(row, ncel)
-        If nct <> LC.Text Or ncel(0).column < cel(0).column Then Exit Do
+        If nct <> LC.text Or ncel(0).column < cel(0).column Then Exit Do
         If ncel(0).column > cel(0).column Then
             If cont Then Print #fh, "  "
             Call inParagraph(fh, row, ncel, lvl + 1, lastCrLf)
             cont = False
         Else
             If cont Then
-                If left(ncel(0).Text, 1) = " " Then
+                If left(ncel(0).text, 1) = " " Then
                     Print #fh, "  "
                 Else
                     Print #fh, ""
                 End If
             End If
             Call indent(fh, lvl)
-            Print #fh, LTrim(ncel(0).Text);
+            Print #fh, LTrim(ncel(0).text);
             cont = True
             row = row + 1
         End If
@@ -100,7 +100,7 @@ End Function
 Private Function inTableRow(ByVal fh As Integer, ByRef row As Long, _
             ByVal cel As Variant)
 '    Print #fh, "| " & cel(0).Text & " | ";
-    Print #fh, "###### " & cel(0).Text
+    Print #fh, "###### " & cel(0).text
     Set cel(0) = cel(1)
     inTableRow = inParagraph(fh, row, cel, , False)
 '    Print #fh, " |"
@@ -109,15 +109,15 @@ End Function
 
 Private Function getCategory(ByVal row As Long, ByRef cel As Variant) As LC
     getCategory = 0
-    If cells(row, 1).Text <> "" Then
+    If cells(row, 1).text <> "" Then
         Set cel(0) = cells(row, 1)
     Else
         Set cel(0) = cells(row, 1).End(xlToRight)
     End If
     Set cel(1) = cells(row, columns.count).End(xlToLeft)
     If cel(1).column < cel(0).column Then Exit Function
-    l = Len(cel(0).Text)
-    idx = InStr("■○―・", cel(0).Text)
+    l = Len(cel(0).text)
+    idx = InStr("■○―・", cel(0).text)
     If cel(0).column = 1 And idx > 0 Then
         getCategory = idx
     ElseIf idx = 4 Then
@@ -125,7 +125,7 @@ Private Function getCategory(ByVal row As Long, ByRef cel As Variant) As LC
     ElseIf cel(1).column > cel(0).column Then
         getCategory = LC.TR
     Else
-        getCategory = LC.Text
+        getCategory = LC.text
     End If
 End Function
 
@@ -133,28 +133,75 @@ Private Sub indent(ByVal fh As Integer, ByVal num As Integer)
     Print #fh, String(num, 9);
 End Sub
 
-Private Sub btnUp_Click()
-    Call nextSection(-1)
+
+'   シートがアクティブになったらTOCを設定
+Private Sub Worksheet_Activate()
+    Call makeTOC
 End Sub
 
-Private Sub btnDown_Click()
-    Call nextSection(1)
+'   TOC作成
+Private Sub makeTOC()
+    Dim mark, no As String
+    Dim row As Long
+    Dim num(1) As Integer
+    cmbTOC.Clear
+    For row = 2 To cells(rows.count, 1).End(xlUp).row
+        mark = cells(row, 1).text
+        If mark = "■" Then
+            num(0) = num(0) + 1
+            num(1) = 0
+            no = " (" & Trim(num(0)) & ")"
+            cmbTOC.AddItem mark & cells(row, 2).text & no
+        ElseIf mark = "○" Then
+            num(1) = num(1) + 1
+            no = " (" & Trim(num(0)) & "." & Trim(num(1)) & ")"
+            cmbTOC.AddItem mark & cells(row, 2).text & no
+        End If
+    Next
 End Sub
 
-Private Sub nextSection(ByVal dir As Integer)
-    Dim cel, top As Range
-    Dim upper, lower As Long
-    
-    lower = 2
-    upper = cells(rows.count, 1).End(xlUp).row
+'   TOCより指定が合ったらジャンプ
+Private Sub cmbTOC_Change()
+    Dim row As Long
+    Dim cel As Range
+    Dim dir As Integer
+    row = getSectionRow(cmbTOC.value)
+    If row = 0 Then Exit Sub
     Set cel = cells(Selection.row, 1)
-    If cel.row < lower Then Set cel = cells(lower, 1)
-    If cel.row > upper Then Set cel = cells(upper, 1)
-    Do
+    Do While row <> cel.row
+        dir = row - cel.row
+        dir = Sgn(dir) + Fix(dir / 5)
         Set cel = cel.Offset(dir, 0)
-        If cel.row > 1 Then Set top = cel.Offset(-1, 0) Else Set top = cel
-        ActiveWindow.ScrollRow = top.row
         Application.Goto cel
-    Loop While lower < cel.row And cel.row < upper And cel.Text <> "■" And cel.Text <> "○"
+        ActiveWindow.ScrollRow = cel.row
+    Loop
 End Sub
+
+'   TOCの値より行の取得
+Private Function getSectionRow(ByVal head As String) As Long
+    Dim mark As String
+    Dim num(1), hnum(1), pos(1) As Integer
+    
+    pos(0) = InStr(head, "(")
+    pos(1) = InStr(head, ")")
+    If pos(0) = 0 Then Exit Function
+    head = Mid(head, pos(0) + 1, pos(1) - pos(0) - 1)
+    pos(0) = InStr(head, ".")
+    If pos(0) > 0 Then
+        hnum(1) = val(Mid(head, pos(0) + 1))
+        head = Mid(head, 1, pos(0) - 1)
+    End If
+    hnum(0) = val(head)
+    For getSectionRow = 2 To cells(rows.count, 1).End(xlUp).row
+        mark = cells(getSectionRow, 1).text
+        If mark = "■" Then
+            num(0) = num(0) + 1
+            num(1) = 0
+            If hnum(1) = 0 And num(0) = hnum(0) Then Exit Function
+        ElseIf mark = "○" Then
+            num(1) = num(1) + 1
+            If num(1) = hnum(1) And num(0) = hnum(0) Then Exit Function
+        End If
+    Next
+End Function
 
