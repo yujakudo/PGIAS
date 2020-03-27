@@ -132,7 +132,7 @@ Private Sub SetRanking(ByVal rng As Range)
     Dim rnkNum As Integer
     
     Set settings = getSettings(rng.Parent.Range(CR_R_Settngs))
-    dmySet = getDummySettings(rng.paremt)
+    dmySet = getDummySettings(rng.Parent)
     rnkNum = settings(CR_SetRankNum)
     Set lo = rng.ListObject
     If lo Is Nothing Then Exit Sub
