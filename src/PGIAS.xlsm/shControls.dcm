@@ -151,7 +151,7 @@ Public Function MargeImportBasicData(Optional ByVal overwrite As Boolean = False
     '   ファイルオープン
     fh = openFileWithDialog("Text,*.txt")
     If fh < 0 Then Exit Function
-    Call doMacro(msgExporting)
+    Call doMacro(msgImporting)
     '   テーブルのソート
     Call SortBasicTables
     '   種族シート

@@ -86,6 +86,8 @@ Public Const IND_HP2 As String = "HP2"
 Public Const IND_SCP As String = "SCP"
 Public Const IND_DCP As String = "DCP"
 Public Const IND_Endurance As String = "耐久力"
+Public Const IND_gTCP As String = "gTCP"
+Public Const IND_mTCP As String = "mTCP"
 
 Public Const IND_GymBattle = "　_g"
 Public Const IND_MtcBattle = "　_m"
@@ -124,6 +126,10 @@ Public Const IND_prDefPower As String = "防御力_pr"
 Public Const IND_DeltaDefPower As String = "Δ_DefP"
 Public Const IND_prEndurance As String = "耐久力_pr"
 Public Const IND_DeltaEndurance As String = "Δ_End"
+Public Const IND_prGTCP As String = "gTCP"
+Public Const IND_prMTCP As String = "mTCP"
+Public Const IND_DeltaGTCP As String = "Δ_gTCP"
+Public Const IND_DeltaMTCP As String = "Δ_mTCP"
 
 Public Const IND_TargetNormalAtk As String = C_NormalAttack & "_pr"
 Public Const IND_TargetSpecialAtk As String = C_SpecialAttack & "_pr"
@@ -247,6 +253,8 @@ Public Const SA1_CP As String = "CP"
 Public Const SA1_SCP As String = "SCP"
 Public Const SA1_DCP As String = "DCP"
 Public Const SA1_Endurance As String = "耐久力"
+Public Const SA1_gTCP As String = "gTCP"
+Public Const SA1_mTCP As String = "mTCP"
 
 Public Const SA1_GymBattleT = "ジム"
 Public Const SA1_MtcBattleT = "対戦"
@@ -285,7 +293,11 @@ Public Const SA1_SA_Dpe = "tDPE最大" & C_SpecialAttack
 Public Const SA1_SA_DpeAtkName = "ゲージtDPE技"
 Public Const SA1_SA_DpeValue = "ゲージtDPE"
 
-Public Const SA1_LastColumn As String = "ΔcDPT"
+Public Const SA1_ReccomendedIV As String = "リーグ別おすすめ個体値"
+Public Const SA1_LeagueIV1 As String = "スーパー_iv"
+Public Const SA1_LeagueIV2 As String = "ハイパー_iv"
+
+Public Const SA1_LastColumn As String = SA1_LeagueIV2
 
 Public Const R_NormalAtkSpeciesSelect As String = "通常わざ種族選択"
 Public Const R_SpecialAtkSpeciesSelect As String = "ゲージわざ種族選択"

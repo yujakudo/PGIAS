@@ -749,7 +749,7 @@ End Function
 '   個体の取得
 Public Function getIndividual(ByVal identifier As Variant, _
                 ByRef mon As Monster, _
-                Optional ByVal prediction As Boolean = False)
+                Optional ByVal prediction As Boolean = False) As Boolean
     Dim ind As Object
     Dim nickname As String
     Dim snum As Long
@@ -770,7 +770,7 @@ Public Function getIndividual(ByVal identifier As Variant, _
                 identifier, IND_Nickname, shIndividual, indAttr)
     End If
     '   入力途中かチェック
-    If IsEmpty(indAttr(1)) Or IsEmpty(indAttr(2)) Or IsEmpty(indAttr(3)) Then
+    If indAttr(3) = 0 Or IsEmpty(indAttr(1)) Or IsEmpty(indAttr(2)) Or IsEmpty(indAttr(3)) Then
         Exit Function
     End If
     If prediction Then PL = indAttr(5) Else PL = indAttr(4)
@@ -1256,7 +1256,7 @@ Public Function getKtRank(ByVal rankNum As Long, _
         CP = cel.value
         If (CPlimit(1) > 0 And CP < CPlimit(1)) Or (CPlimit(0) > 0 And CPlimit(0) < CP) Then GoTo Continue
         '   個体の設定
-        Call getIndividual(cel, self, prediction)
+        If Not getIndividual(cel, self, prediction) Then GoTo Continue
         Call setIndividualAttacks(self, enemy.mode, predict, cel, selfAtkDelay, _
                                     (enemy.mode = C_IdMtc))
         If self.PL = 0 Or self.atkIndex(0).lower < 0 Or self.atkIndex(1).lower < 0 Then GoTo Continue
@@ -1411,3 +1411,90 @@ Public Function getAveKTR( _
     Next
     getAveKTR = sumKtr
 End Function
+
+'   ターゲットCPに合う個体値の探索
+Function getFitIndiv(ByRef self As Monster, ByVal tCP As Long, _
+                    Optional ByVal rnkNum As Integer = 100) As Variant
+    Dim atk, def, hp, cnt As Long
+    Dim PLlim(1), CPM(), CPM2(), DH, ADH, drv, drvMax, CP, cpg As Double
+    Dim n, i As Integer
+    Dim sv, rnk(), vtmp As Variant
+    Dim enemy As Monster
+    
+    '   charge countを計算しておく
+    If Not calcChargeCount(self) Then Exit Function
+    Call getMonsterByPower(enemy)
+    sv = getSpcAttrs(self.species, Array("ATK", "DEF", "HP"))
+    '   種族値よりPLの範囲を得、CMP^2を計算しておく
+    cpg = sv(0) * Sqr(sv(1) * sv(2)) / 10
+    PLlim(1) = getPLbyCpg(tCP, cpg)
+    cpg = (sv(0) + 15) * Sqr((sv(1) + 15) * (sv(2) + 15)) / 10
+    PLlim(0) = getPLbyCpg(tCP, cpg)
+    n = (PLlim(1) - PLlim(0)) * 2
+    ReDim CPM(n), CPM2(n)
+    For i = 0 To n
+        CPM(i) = getCPM(PLlim(0) + 0.5 * i)
+        CPM2(i) = CPM(i) ^ 2
+    Next
+    ReDim rnk(rnkNum)
+    For def = 0 To 15
+        self.indDEF = def
+        For hp = 0 To 15
+            self.indHP = hp
+            DH = Sqr((sv(1) + def) * (sv(2) + hp))
+            For atk = 0 To 15
+                self.indATK = atk
+                ADH = (sv(0) + atk) * DH / 10
+                drvMax = 0
+                For i = n To 0 Step -1
+                    CP = CPM2(i) * ADH
+                    If CP < tCP - 200 Then Exit For
+                    If CP < tCP + 1 Then
+                        self.atkPower = (self.indATK + sv(0)) * CPM(i)
+                        self.defPower = (self.indDEF + sv(1)) * CPM(i)
+                        self.hpPower = (self.indHP + sv(2)) * CPM(i)
+                        drvMax = calcTCP(self, enemy)
+                        Exit For
+'                        drv = calcTCP(self, enemy)
+'                        If drvMax < drv Then
+'                            drvMax = drv
+'                        End If
+                    End If
+                Next
+                If drvMax > 0 Then
+                    cnt = cnt + 1
+                    rnk(rnkNum) = Array(atk, def, hp, drvMax)
+                    For i = rnkNum - 1 To 0 Step -1
+                        If IsArray(rnk(i)) Then
+                            If rnk(i)(3) > rnk(i + 1)(3) Then Exit For
+                        End If
+                        vtmp = rnk(i): rnk(i) = rnk(i + 1): rnk(i + 1) = vtmp
+                    Next
+                End If
+            Next
+        Next
+    Next
+    If cnt > rnkNum Then cnt = rnkNum
+    If cnt > 0 Then
+        ReDim Preserve rnk(cnt - 1)
+        getFitIndiv = rnk
+    End If
+End Function
+
+'   TCPの算出
+Public Function calcTCP(ByRef self As Monster, ByRef enemy As Monster) As Double
+    Dim damage, period As Double
+    Dim atkIdx As Variant
+    
+    Call calcDamages(self, enemy, True)
+    atkIdx = getAttackIndex(self)
+    With self
+        damage = .attacks(atkIdx(0)).damage * self.chargeCount + .attacks(atkIdx(1)).damage
+        period = .attacks(atkIdx(0)).idleTime * self.chargeCount + .attacks(atkIdx(1)).idleTime
+    End With
+    calcTCP = damage / period * Fix(self.hpPower) / (1000 / self.defPower + 1)
+End Function
+
+
+
+

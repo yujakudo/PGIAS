@@ -44,6 +44,7 @@ Public Sub addNewSpecies(Optional ByVal withLimitedAtk As Boolean = True)
                 Call makeEndurance(row)
                 Call makeAtkAna(C_IdGym, CDPS_RANKS, row, withLimitedAtk)
                 Call makeAtkAna(C_IdMtc, CDPS_RANKS, row, withLimitedAtk)
+                Call makeLeagueIVRank(row)
             End If
             row = row + 1
         Loop
@@ -64,6 +65,7 @@ Public Sub makeTableSpeciesAna1( _
     Call makeEndurance
     Call makeAtkAna(C_IdGym, CDPS_RANKS, 0, withLimitedAtk)
     Call makeAtkAna(C_IdMtc, CDPS_RANKS, 0, withLimitedAtk)
+    Call makeLeagueIVRank
     '   種族マップ
     Call shSpeciesMap.MakeSpeciesMap
     Call doMacro
@@ -195,7 +197,8 @@ Private Sub makeAtkAna(Optional ByVal mode As Integer = C_IdGym, _
                 Optional ByVal rnks As Long = 3, _
                 Optional ByVal srow As Long = 0, _
                 Optional ByVal withLimited As Boolean = True)
-    Dim row, col, i, j, atkClass, idx As Long
+    Dim row, scol, col, i, j, atkClass, idx As Long
+    Dim TCPcols As Variant
     Dim species As String
     Dim param As Variant
     Dim AtkParam() As AttackParam
@@ -207,6 +210,10 @@ Private Sub makeAtkAna(Optional ByVal mode As Integer = C_IdGym, _
     
     Call makeInfluenceCache
     rowr = getRowRange(srow)
+    scol = getColumnIndex( _
+            Array(SA1_GymBattle, SA1_MtcBattle)(mode), ListObjects(1)) + 1
+    TCPcols = getColumnIndexes(ListObjects(1), _
+            Array(Array(SA1_gTCP, SA1_mTCP)(mode), SA1_Endurance))
     '   ループ
     With ListObjects(1).DataBodyRange
         For row = rowr(0) To rowr(1)
@@ -216,8 +223,7 @@ Private Sub makeAtkAna(Optional ByVal mode As Integer = C_IdGym, _
             Call getAtkAna(AtkParam, cdpss, mode, species, withLimited)
             '   各わざの最大値の探索
             '   書き込み列の先頭
-            col = getColumnIndex( _
-                    Array(SA1_GymBattle, SA1_MtcBattle)(mode), ListObjects(1)) + 1
+            col = scol
             idx = 0
             For atkClass = 0 To 1
                 Erase mval
@@ -258,20 +264,21 @@ Private Sub makeAtkAna(Optional ByVal mode As Integer = C_IdGym, _
                 .cells(row, col + 3).value = cdpss(i).Cycle
                 col = col + 4
             Next
-        Next
+            .cells(row, TCPcols(0)).value = cdpss(0).cDPS * .cells(row, TCPcols(1)).value
+        Next    '   row
     End With
 End Sub
 
 '   ヘッダの作成
 Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
-    Dim hTop, hAna, hAnaT, hDcp, btlTitle, btlName As Variant
+    Dim hTop, hAna, hAnaT, hDcp, btlTitle, btlName, hRcmIV As Variant
     Dim hDcpT, sn As String
     Dim row, col, i, n, blt, j As Long
 
     hTop = Array(SA1_Number, SA1_Name, SA1_Type, SA1_DoubleWeak, _
                 SA1_SingleWeak, SA1_SingleToler, SA1_DoubleToler, _
                 SA1_OverToler, SA1_ATKPower, SA1_DEFPower, SA1_HP, _
-                SA1_CP, SA1_SCP, SA1_DCP, SA1_Endurance)
+                SA1_CP, SA1_SCP, SA1_DCP, SA1_Endurance, SA1_gTCP, SA1_mTCP)
     hAna = Array(SA1_NA_DamageAtkName, SA1_NA_DamageValue, _
                 SA1_NA_DpsAtkName, SA1_NA_DpsValue, _
                 SA1_NA_EpsAtkName, SA1_NA_EpsValue, _
@@ -284,6 +291,7 @@ Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
     hDcpT = SA1_cDpsRank
     btlTitle = Array(SA1_GymBattleT, SA1_MtcBattleT)
     btlName = Array(SA1_GymBattle, SA1_MtcBattle)
+    hRcmIV = Array(SA1_LeagueIV1, SA1_LeagueIV2)
     row = ListObjects(1).HeaderRowRange.row
     col = 1
     '   先頭の情報
@@ -341,6 +349,12 @@ Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
             Next
         Next
     Next
+    '   おすすめ個体値
+    cells(row - 1, col).value = SA1_ReccomendedIV
+    For i = 0 To UBound(hRcmIV)
+        cells(row, col).value = hRcmIV(i)
+        col = col + 1
+    Next
     If Not shControls.chkShowSuffix Then
         Call switchHeaderSuffixes(False)
     End If
@@ -351,7 +365,49 @@ Sub sortNormally()
     Call sortTable(shSpeciesAnalysis1, Array(SPEC_Number, SPEC_Name))
 End Sub
 
+'   リーグ別おすすめ個体値の作成
+Private Sub makeLeagueIVRank(Optional ByVal srow As Long = 0, _
+                            Optional ByVal rnkNum As Integer = 20)
+    Dim rowr, cols, attr, tCP As Variant
+    Dim i As Integer
+    Dim species As String
+    Dim mon As Monster
+    
+    rowr = getRowRange(srow)
+    cols = getColumnIndexes(shSpeciesAnalysis1, _
+            Array(SA1_LeagueIV1, SA1_LeagueIV2, SA1_Name, _
+            SA1_CDST_NormalAtkName & "1", SA1_CDST_SpecialAtkName & "1"))
+    tCP = Array(C_UpperCPl1, C_UpperCPl2)
+    '   ループ
+    With ListObjects(1).DataBodyRange
+        For row = rowr(0) To rowr(1)
+            species = .cells(row, cols(2)).text
+            Call getMonster(mon, species)
+            Call setAttacks(C_IdMtc, mon, .cells(row, cols(3)).text, .cells(row, cols(4)).text)
+            attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
+            For i = 0 To 1
+                With .cells(row, cols(i))
+                    .value = getIvStr(getFitIndiv(mon, tCP(i), rnkNum))
+                    If .value = "" Then .value = " "
+                    .WrapText = False
+                End With
+            Next
+        Next
+    End With
+End Sub
 
-
-
-
+Private Function getIvStr(ByRef rnk As Variant) As String
+    Dim i, drv, cur As Long
+    If Not IsArray(rnk) Then Exit Function
+    For i = 0 To UBound(rnk)
+        drv = Fix(rnk(i)(3))
+        If drv = 0 Then Exit For
+        If cur <> drv Then
+            If getIvStr <> "" Then getIvStr = left(getIvStr, Len(getIvStr) - 2) & vbCrLf
+            getIvStr = getIvStr & drv & ": "
+            cur = drv
+        End If
+        getIvStr = getIvStr & Hex(rnk(i)(0)) & Hex(rnk(i)(1)) & Hex(rnk(i)(2)) & ", "
+    Next
+    If getIvStr <> "" Then getIvStr = left(getIvStr, Len(getIvStr) - 2)
+End Function

@@ -18,7 +18,10 @@ Private Sub btnNewArticle_Click()
         .ListRows.Add (1)
         With .DataBodyRange
             getColumn(VH_Branch, .cells(1, 1)).value = settings(GS_BranchName)
-            getColumn(VH_Date, .cells(1, 1)).value = Now
+            With getColumn(VH_Date, .cells(1, 1))
+                .value = Now
+                .NumberFormatLocal = .Offset(1, 0).NumberFormatLocal
+            End With
         End With
     End With
 End Sub
@@ -59,11 +62,13 @@ Private Sub ReleaseFile()
     fn(0) = dir & "\" & settings(GS_FileName) & vers(0) & vers(1) & ".xlsm"
     fn(1) = dir & "\" & settings(GS_FileName) & vers(0) & ".xlsm"
     '   èàóùÇÃäJén
+    Aplication.Alerts = False
     ActiveWorkbook.Save
     Call shControls.AllClear(False)
     For i = 0 To 1
         ActiveWorkbook.SaveAs fileName:=fn(i), FileFormat:= _
             xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False
     Next
+    Aplication.Alerts = True
 End Sub
 

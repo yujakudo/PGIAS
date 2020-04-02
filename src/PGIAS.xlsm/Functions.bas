@@ -429,7 +429,7 @@ Public Function getPLbyCP2(ByVal tCP As Long, _
 End Function
 
 '   CPG((í‘°’l{ŒÂ‘Ì’l)‚Ìd‚İÏ/10)‚æ‚èPL‚ğ“¾‚é
-Private Function getPLbyCpg(ByVal tCP As Long, ByVal cpg As Double) As Double
+Public Function getPLbyCpg(ByVal tCP As Long, ByVal cpg As Double) As Double
     Dim CPM, tPL As Double
     CPM = Sqr((tCP + 1) / cpg)
     tPL = getPLbyCPM(CPM, True)

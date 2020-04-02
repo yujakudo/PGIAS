@@ -17,6 +17,11 @@ Enum RankFlag
     FRNK_DROPENTRY = 8
 End Enum
 
+'   setDefParamsのフラグ
+Enum DefParamFlag
+    FDP_UNSET_ATK = 1
+    FDP_AUTO = 2
+End Enum
 
 '   天候の設定
 Public Function onSetWeatherClick(ByVal sh As Worksheet, _
@@ -736,6 +741,7 @@ Private Sub speciesChange(ByVal Target As Range, _
     Dim exists As Boolean
     Dim settings As Object
     Dim dmySet As DummySet
+    Dim flag As Integer
     
     If Target.Offset(1, 0) <> "" Then
         Call insertRows(Target, 2)
@@ -757,7 +763,9 @@ Private Sub speciesChange(ByVal Target As Range, _
         End If
     Else
         '   有効な種族名のとき
-        Call setDefParams(Target, settings, nullAtk, species)
+        flag = FDP_AUTO
+        If nullAtk Then flag = flag Or FDP_UNSET_ATK
+        Call setDefParams(Target, settings, flag, species)
     End If
     '   日時と天候のクリア
     With getColumn(CR_Time, Target)
@@ -909,6 +917,7 @@ Private Function setEnemySettings(ByVal Target As Range, ByVal cat As Integer, _
         Call setEnemySettingValue(tcel, 0, CR_CPLimit, limit(0))
         Call setEnemySettingValue(tcel, 1, CR_CPLimit, limit(1))
     End If
+    tcel.ClearContents: tcel.Offset(1, 0).ClearContents
     If IsArray(attacks) Then
         Call setAtkNames(C_IdNormalAtk, attacks(0), tcel)
         Call setAtkNames(C_IdSpecialAtk, attacks(1), tcel.Offset(1, 0))
@@ -938,7 +947,7 @@ End Sub
 '   イベント抑制は呼び出し側で
 Private Sub setDefParams(ByVal Target As Range, _
             ByRef settings As Object, _
-            Optional ByVal nullAtk As Boolean = False, _
+            Optional ByVal flag As Integer = 0, _
             Optional ByVal species As String = "", _
             Optional ByVal PL As Double = 40, _
             Optional ByVal atk As Long = 15, _
@@ -951,9 +960,12 @@ Private Sub setDefParams(ByVal Target As Range, _
     Dim cat As Integer
     Dim CpUpper As Long
     
-    CpUpper = getCpUpper(settings(C_AutoTarget), 0)
+    If (flag And FDP_AUTO) Then
+        Call setIVasAutoTarget(settings, species, atk, def, hp, CpUpper)
+    End If
     cat = getMonBySettingVal(mon, species, PL, atk, def, hp, CP, CpUpper)
-    If Not nullAtk Then
+    '   わざ未指定フラグがなかったら技をセット
+    If 0 = (flag And FDP_UNSET_ATK) Then
         If settings(CR_SetMode) = C_Gym Then
             atks = Array(SA1_CDSP_NormalAtkName & "1", SA1_CDSP_SpecialAtkName & "1")
         Else
@@ -967,6 +979,45 @@ Private Sub setDefParams(ByVal Target As Range, _
     types = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2))
     Call setTypeToCell(types, getColumn(CR_Memo, tcel.Offset(1, 0)))
 End Sub
+
+'   自動目標によって個体値を設定
+Private Function setIVasAutoTarget(ByRef settings As Object, _
+            ByVal species As String, _
+            ByRef atk As Long, ByRef def As Long, ByRef hp As Long, _
+            ByRef CpUpper As Long) As Integer
+    Dim amode, cname As String
+    Dim rivs As Variant
+    Dim pos(2) As Integer
+
+    setIVasAutoTarget = 0
+    rivs = seachAndGetValues(species, SA1_Name, shSpeciesAnalysis1, _
+                            Array(SA1_LeagueIV1, SA1_LeagueIV2))
+    amode = settings(C_AutoTarget)
+    If amode = C_League1 Then
+        CpUpper = C_UpperCPl1
+        rivs = rivs(0)
+        setIVasAutoTarget = 1
+    ElseIf amode = C_League2 Then
+        CpUpper = C_UpperCPl2
+        rivs = rivs(1)
+        setIVasAutoTarget = 2
+    Else
+            Exit Function
+    End If
+    pos(0) = InStr(rivs, vbCrLf)
+    If pos(0) > 0 Then
+        rivs = left(rivs, pos(0) - 1)
+    End If
+    pos(0) = InStr(rivs, ":")
+    If pos(0) < 1 Then Exit Function
+    pos(1) = InStr(rivs, ",")
+    If pos(1) < 1 Then pos(1) = Len(rivs) + 1
+    rivs = Trim(Mid(rivs, pos(0) + 1, pos(1) - pos(0) - 1))
+    atk = val("&H" + Mid(rivs, 1, 1))
+    def = val("&H" + Mid(rivs, 2, 1))
+    hp = val("&H" + Mid(rivs, 3, 1))
+End Function
+
 
 '   設定値よりモンスタを得る
 '   戻りはカテゴリ番号
@@ -1210,11 +1261,13 @@ Public Sub addFromList(ByVal sh As Worksheet, _
     Dim lname As String
     Dim lo As ListObject
     Dim settings As Object
+    Dim flag As Integer
     
     Set settings = getSettings(sh.Range(CR_R_Settngs))
     lname = sh.Range(CR_R_ListSelect).text
     Set lo = shList.getEnemyList(lname)
     If lo Is Nothing Then Exit Sub
+    If nullAtk Then flag = FDP_UNSET_ATK Else flag = 0
     Call doMacro(msgstr(msgAddingListItems, lname))
     With sh.ListObjects(1).ListColumns(CR_Species).DataBodyRange
         Set wcel = .cells(1, 1)
@@ -1223,7 +1276,7 @@ Public Sub addFromList(ByVal sh As Worksheet, _
         End If
     End With
     For Each rcel In lo.ListColumns(LI_Species).DataBodyRange
-        Call setListItem(settings, rcel, wcel, , nullAtk)
+        Call setListItem(settings, rcel, wcel, flag)
     Next
     Call doMacro
 End Sub
@@ -1231,8 +1284,8 @@ End Sub
 '   リスト項目の追加
 Private Function setListItem(ByRef settings As Object, _
                             ByRef rcel As Range, ByRef wcel As Range, _
-                    Optional ByVal CpUpper As Long = 0, _
-                    Optional ByVal nullAtk As Boolean = False) As Boolean
+                    Optional ByVal flag As Integer = 0, _
+                    Optional ByVal CpUpper As Long = 0) As Boolean
     Dim attr As Object
     Dim cel As Range
     Dim row As Long
@@ -1246,11 +1299,12 @@ Private Function setListItem(ByRef settings As Object, _
         If attr(LI_Category) <> "" And attr(LI_Note) <> "" Then spl = ": " Else spl = ""
         wcel.Offset(0, 1).value = attr(LI_Category) & spl & attr(LI_Note)
         If attr(LI_HP) > 0 Then
-            Call setDefParams(wcel, settings, nullAtk, _
+            Call setDefParams(wcel, settings, flag, _
                     attr(LI_Species), attr(LI_PL), _
                         attr(LI_ATK), attr(LI_DEF), attr(LI_HP), attr(LI_CP))
         Else
-            Call setDefParams(wcel, settings, nullAtk, attr(LI_Species))
+            flag = flag Or FDP_AUTO
+            Call setDefParams(wcel, settings, flag, attr(LI_Species))
         End If
         row = wcel.row - wcel.ListObject.HeaderRowRange.row
         Call setBorders(wcel, Array(row, row + 1))
