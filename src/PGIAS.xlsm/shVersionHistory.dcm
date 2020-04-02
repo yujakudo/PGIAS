@@ -62,13 +62,13 @@ Private Sub ReleaseFile()
     fn(0) = dir & "\" & settings(GS_FileName) & vers(0) & vers(1) & ".xlsm"
     fn(1) = dir & "\" & settings(GS_FileName) & vers(0) & ".xlsm"
     '   èàóùÇÃäJén
-    Aplication.Alerts = False
+    Application.DisplayAlerts = False
     ActiveWorkbook.Save
     Call shControls.AllClear(False)
     For i = 0 To 1
         ActiveWorkbook.SaveAs fileName:=fn(i), FileFormat:= _
             xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False
     Next
-    Aplication.Alerts = True
+    Application.DisplayAlerts = True
 End Sub
 
