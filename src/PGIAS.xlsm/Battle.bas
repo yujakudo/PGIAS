@@ -2,6 +2,9 @@ Attribute VB_Name = "Battle"
 
 Option Explicit
 
+'   SL, HLで戦力外になるライン
+Const OUT_OF_LEAGUE_LINE As Integer = 200
+
 '   ゲージの最大量
 Const RSV_MAX As Double = 100#
 
@@ -92,6 +95,7 @@ Public Type Monster
     clock As Double
     mode As Integer
     phase As Integer
+    chace As Variant
 End Type
 
 '   技の評価値
@@ -603,7 +607,7 @@ Private Sub setAtkIndexes(ByRef mon As Monster, ByVal atkClass As Integer, _
 End Sub
 
 '   チャージ発数の計算
-Private Function calcChargeCount(ByRef mon As Monster) As Boolean
+Public Function calcChargeCount(ByRef mon As Monster) As Boolean
     Dim charge As Double
     If mon.atkIndex(0).selected < 0 Or mon.atkIndex(1).selected < 0 Then
         mon.chargeCount = 1.7E+308
@@ -1413,30 +1417,41 @@ Public Function getAveKTR( _
 End Function
 
 '   ターゲットCPに合う個体値の探索
-Function getFitIndiv(ByRef self As Monster, ByVal tCP As Long, _
-                    Optional ByVal rnkNum As Integer = 100) As Variant
-    Dim atk, def, hp, cnt As Long
-    Dim PLlim(1), CPM(), CPM2(), DH, ADH, drv, drvMax, CP, cpg As Double
+'   戻り値は配列の配列（通常のランキングと、10以上に縛ったランキング
+Function getFitIndiv(ByRef self As Monster, ByVal TCP As Long, _
+                    Optional ByVal rnkNum As Integer = 100, _
+                    Optional ByVal lrnkNum As Integer = 20) As Variant
+    Dim atk, def, hp, cnt, lcnt As Long
+    Dim PLlim(1), CPM(), CPM2(), DH, ADH, drv, CP, cpg As Double
     Dim n, i As Integer
-    Dim sv, rnk(), vtmp As Variant
+    Dim sv, rnk(), lrnk(), vals, min As Variant
     Dim enemy As Monster
     
     '   charge countを計算しておく
+'    If Not calcAndStoreChargeCount(self, 1) Then Exit Function
     If Not calcChargeCount(self) Then Exit Function
+    
     Call getMonsterByPower(enemy)
     sv = getSpcAttrs(self.species, Array("ATK", "DEF", "HP"))
     '   種族値よりPLの範囲を得、CMP^2を計算しておく
-    cpg = sv(0) * Sqr(sv(1) * sv(2)) / 10
-    PLlim(1) = getPLbyCpg(tCP, cpg)
-    cpg = (sv(0) + 15) * Sqr((sv(1) + 15) * (sv(2) + 15)) / 10
-    PLlim(0) = getPLbyCpg(tCP, cpg)
-    n = (PLlim(1) - PLlim(0)) * 2
-    ReDim CPM(n), CPM2(n)
-    For i = 0 To n
-        CPM(i) = getCPM(PLlim(0) + 0.5 * i)
-        CPM2(i) = CPM(i) ^ 2
-    Next
-    ReDim rnk(rnkNum)
+    If TCP > 0 Then
+        cpg = sv(0) * Sqr(sv(1) * sv(2)) / 10
+        PLlim(1) = getPLbyCpg(TCP, cpg)
+        cpg = (sv(0) + 15) * Sqr((sv(1) + 15) * (sv(2) + 15)) / 10
+        PLlim(0) = getPLbyCpg(TCP, cpg)
+        n = (PLlim(1) - PLlim(0)) * 2
+        ReDim CPM(n), CPM2(n)
+        For i = 0 To n
+            CPM(i) = getCPM(PLlim(0) + 0.5 * i)
+            CPM2(i) = CPM(i) ^ 2
+        Next
+    Else
+        ReDim CPM(0), CPM2(0)
+        CPM(0) = getCPM(40)
+        CPM2(0) = CPM(0) ^ 2
+    End If
+    ReDim rnk(rnkNum), lrnk(lrnkNum)
+    min = Array(-1, -1, -1, C_MaxLong)
     For def = 0 To 15
         self.indDEF = def
         For hp = 0 To 15
@@ -1445,54 +1460,97 @@ Function getFitIndiv(ByRef self As Monster, ByVal tCP As Long, _
             For atk = 0 To 15
                 self.indATK = atk
                 ADH = (sv(0) + atk) * DH / 10
-                drvMax = 0
+                drv = 0
                 For i = n To 0 Step -1
                     CP = CPM2(i) * ADH
-                    If CP < tCP - 200 Then Exit For
-                    If CP < tCP + 1 Then
+                    If TCP <= 0 Or CP < TCP + 1 Then
                         self.atkPower = (self.indATK + sv(0)) * CPM(i)
                         self.defPower = (self.indDEF + sv(1)) * CPM(i)
                         self.hpPower = (self.indHP + sv(2)) * CPM(i)
-                        drvMax = calcTCP(self, enemy)
+                        drv = calcTCP(self, enemy)
                         Exit For
-'                        drv = calcTCP(self, enemy)
-'                        If drvMax < drv Then
-'                            drvMax = drv
-'                        End If
                     End If
                 Next
-                If drvMax > 0 Then
+                If drv > 0 Then
+                    vals = Array(atk, def, hp, drv, CP)
                     cnt = cnt + 1
-                    rnk(rnkNum) = Array(atk, def, hp, drvMax)
-                    For i = rnkNum - 1 To 0 Step -1
-                        If IsArray(rnk(i)) Then
-                            If rnk(i)(3) > rnk(i + 1)(3) Then Exit For
-                        End If
-                        vtmp = rnk(i): rnk(i) = rnk(i + 1): rnk(i + 1) = vtmp
-                    Next
+                    Call rankIn(rnk, vals)
+                    If atk > 9 And def > 9 And hp > 9 Then
+                        lcnt = lcnt + 1
+                        Call rankIn(lrnk, vals)
+                    End If
+                    If min(3) > drv Then min = vals
                 End If
             Next
         Next
     Next
     If cnt > rnkNum Then cnt = rnkNum
     If cnt > 0 Then
-        ReDim Preserve rnk(cnt - 1)
-        getFitIndiv = rnk
+        If (TCP <= 0 And rnk(0)(4) > C_UpperCPl2) Or (TCP > 0 And rnk(0)(4) >= TCP - OUT_OF_LEAGUE_LINE) Then
+            ReDim Preserve rnk(cnt - 1)
+            If lcnt > lrnkNum Then lcnt = lrnkNum
+            ReDim Preserve lrnk(lcnt - 1)
+            getFitIndiv = Array(rnk, lrnk, min)
+        End If
     End If
 End Function
 
-'   TCPの算出
-Public Function calcTCP(ByRef self As Monster, ByRef enemy As Monster) As Double
-    Dim damage, period As Double
-    Dim atkIdx As Variant
+Private Sub rankIn(ByRef rnk As Variant, ByRef vals As Variant)
+    Dim rnkNum, i As Long
+    Dim vtmp As Variant
+    rnkNum = UBound(rnk)
+    rnk(rnkNum) = vals
+    For i = rnkNum - 1 To 0 Step -1
+        If IsArray(rnk(i)) Then
+            If rnk(i)(3) >= rnk(i + 1)(3) Then Exit For
+        End If
+        vtmp = rnk(i): rnk(i) = rnk(i + 1): rnk(i + 1) = vtmp
+    Next
+End Sub
+
+'   getTCPasAtk用に、charge countを計算してストアしておく
+Public Function calcAndStoreChargeCount(ByRef self As Monster, _
+                ByVal maxIdx As Integer) As Boolean
+    Dim i As Integer
+    Dim chcount() As Double
     
-    Call calcDamages(self, enemy, True)
-    atkIdx = getAttackIndex(self)
+    calcAndStoreChargeCount = False
+    ReDim chcount(maxIdx)
+    For i = 0 To maxIdx
+        self.atkIndex(0).selected = self.atkIndex(0).lower + i
+        self.atkIndex(1).selected = self.atkIndex(1).lower + i
+        If Not calcChargeCount(self) Then Exit Function
+        chcount(i) = self.chargeCount
+    Next
+    self.chace = chcount
+    calcAndStoreChargeCount = True
+End Function
+
+'   indexを指定してTCPを取得する
+Public Function getTCPasAtk(ByRef self As Monster, ByVal atkIdx As Integer, _
+                        ByRef enemy As Monster) As Double
+    self.chargeCount = self.chace(atkIdx)
+    getTCPasAtk = calcTCP(self, enemy, Array( _
+                    self.atkIndex(0).lower + atkIdx, _
+                    self.atkIndex(1).lower + atkIdx))
+End Function
+
+'   TCPの算出
+Public Function calcTCP(ByRef self As Monster, ByRef enemy As Monster, _
+                    Optional ByVal atkIdx As Variant = Nothing) As Double
+    Dim damage, period As Double
+    Dim idx As Integer
+    
+    If Not IsArray(atkIdx) Then atkIdx = getAttackIndex(self)
+    idx = atkIdx(0)
+    Call calcADamage(idx, self, enemy, True)
+    idx = atkIdx(1)
+    Call calcADamage(idx, self, enemy, True)
     With self
         damage = .attacks(atkIdx(0)).damage * self.chargeCount + .attacks(atkIdx(1)).damage
         period = .attacks(atkIdx(0)).idleTime * self.chargeCount + .attacks(atkIdx(1)).idleTime
     End With
-    calcTCP = damage / period * Fix(self.hpPower) / (1000 / self.defPower + 1)
+    calcTCP = damage / period * getEndurance(self.defPower, self.hpPower)
 End Function
 
 

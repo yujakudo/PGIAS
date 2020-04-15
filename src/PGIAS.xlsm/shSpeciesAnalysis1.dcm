@@ -9,7 +9,7 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 
 '   cDPSの表示順位数
-Const CDPS_RANKS As Long = 5
+Const cdps_ranks As Long = 5
 
 '   マップを見るボタン
 Private Sub btnShowMap_Click()
@@ -41,9 +41,9 @@ Public Sub addNewSpecies(Optional ByVal withLimitedAtk As Boolean = True)
         Do While .cells(row, 1).text <> ""
             If .cells(row, col).text = "" Then
                 Call makeWeakness(row)
-                Call makeEndurance(row)
-                Call makeAtkAna(C_IdGym, CDPS_RANKS, row, withLimitedAtk)
-                Call makeAtkAna(C_IdMtc, CDPS_RANKS, row, withLimitedAtk)
+                Call makeParameters(row)
+                Call makeAtkAna(C_IdGym, cdps_ranks, row, withLimitedAtk)
+                Call makeAtkAna(C_IdMtc, cdps_ranks, row, withLimitedAtk)
                 Call makeLeagueIVRank(row)
             End If
             row = row + 1
@@ -58,13 +58,13 @@ End Sub
 Public Sub makeTableSpeciesAna1( _
             Optional ByVal withLimitedAtk As Boolean = True)
     Call doMacro(msgstr(msgMakingSheet, name))
-    Call makeHeader(CDPS_RANKS)
+    Call makeHeader(cdps_ranks)
     Call clearSheet
     Call copyNames
     Call makeWeakness
-    Call makeEndurance
-    Call makeAtkAna(C_IdGym, CDPS_RANKS, 0, withLimitedAtk)
-    Call makeAtkAna(C_IdMtc, CDPS_RANKS, 0, withLimitedAtk)
+    Call makeParameters
+    Call makeAtkAna(C_IdGym, cdps_ranks, 0, withLimitedAtk)
+    Call makeAtkAna(C_IdMtc, cdps_ranks, 0, withLimitedAtk)
     Call makeLeagueIVRank
     '   種族マップ
     Call shSpeciesMap.MakeSpeciesMap
@@ -164,8 +164,8 @@ Private Sub makeWeakness(Optional ByVal srow As Long = 0)
     End With
 End Sub
 
-'   耐久力を計算して埋める
-Private Sub makeEndurance(Optional ByVal srow As Long = 0)
+'   パラメータを計算して埋める
+Private Sub makeParameters(Optional ByVal srow As Long = 0)
     Dim row, colATKP, colDEFP, colHP, colCP, colSCP, colDCP, colEND As Long
     Dim species As String
     Dim hp, def, atk, endur, scp, DCP As Double
@@ -187,9 +187,15 @@ Private Sub makeEndurance(Optional ByVal srow As Long = 0)
             .cells(row, cels(3)).value = atk * Sqr(def) * Sqr(hp) / 10
             .cells(row, cels(4)).value = (atk * def * hp) ^ (2 / 3) / 10
             .cells(row, cels(5)).value = (atk * def ^ 2 * hp ^ 2) ^ (2 / 5) / 10
-            .cells(row, cels(6)).value = hp / (1000 / def + 1)
+            .cells(row, cels(6)).value = getEndurance(def, hp)
         Next
     End With
+End Sub
+
+Public Sub callMakeAtkAna()
+'    Call makeHeader(CDPS_RANKS)
+    Call makeAtkAna(0, 5, 0)
+    Call makeAtkAna(1, 5, 0)
 End Sub
 
 '   わざ分析の作成
@@ -197,7 +203,7 @@ Private Sub makeAtkAna(Optional ByVal mode As Integer = C_IdGym, _
                 Optional ByVal rnks As Long = 3, _
                 Optional ByVal srow As Long = 0, _
                 Optional ByVal withLimited As Boolean = True)
-    Dim row, scol, col, i, j, atkClass, idx As Long
+    Dim row, scol, col, i, j, atkClass, idx, num As Long
     Dim TCPcols As Variant
     Dim species As String
     Dim param As Variant
@@ -256,21 +262,27 @@ Private Sub makeAtkAna(Optional ByVal mode As Integer = C_IdGym, _
                 Next
             Next
             '   cDPSランクの書き込み
-            For i = 0 To UBound(cdpss)
-                If i >= rnks Then Exit For
-                Call setAtkNames(C_IdNormalAtk, cdpss(i).natk, .cells(row, col))
-                Call setAtkNames(C_IdSpecialAtk, cdpss(i).satk, .cells(row, col + 1))
-                .cells(row, col + 2).value = cdpss(i).cDPS
-                .cells(row, col + 3).value = cdpss(i).Cycle
+            num = UBound(cdpss)
+            For i = 0 To rnks - 1
+                idx = i '  lastの領域削除の為  If i < rnks Then idx = i Else idx = num
+                If idx <= num Then
+                    Call setAtkNames(C_IdNormalAtk, cdpss(idx).natk, .cells(row, col))
+                    Call setAtkNames(C_IdSpecialAtk, cdpss(idx).satk, .cells(row, col + 1))
+                    .cells(row, col + 2).value = cdpss(idx).cDPS
+                    .cells(row, col + 3).value = cdpss(idx).Cycle
+                Else
+                    Range(.cells(row, col), .cells(row, col + 3)).ClearContents
+                End If
                 col = col + 4
             Next
+            '   パラメータの領域の、gTCP/mTCP
             .cells(row, TCPcols(0)).value = cdpss(0).cDPS * .cells(row, TCPcols(1)).value
         Next    '   row
     End With
 End Sub
 
 '   ヘッダの作成
-Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
+Private Sub makeHeader(Optional ByVal cdps_ranks As Long = 3)
     Dim hTop, hAna, hAnaT, hDcp, btlTitle, btlName, hRcmIV As Variant
     Dim hDcpT, sn As String
     Dim row, col, i, n, blt, j As Long
@@ -291,7 +303,7 @@ Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
     hDcpT = SA1_cDpsRank
     btlTitle = Array(SA1_GymBattleT, SA1_MtcBattleT)
     btlName = Array(SA1_GymBattle, SA1_MtcBattle)
-    hRcmIV = Array(SA1_LeagueIV1, SA1_LeagueIV2)
+    hRcmIV = Array(SA1_ReccIV, SA1_ReccIVlim, SA1_ReccTCP, SA1_ReccTCPmin)
     row = ListObjects(1).HeaderRowRange.row
     col = 1
     '   先頭の情報
@@ -340,7 +352,7 @@ Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
             col = col + 1
         Next
         '   cDPS
-        For n = 1 To cdsp_ranks
+        For n = 1 To cdps_ranks
             sn = Trim(str(n))
             cells(row - 1, col).value = hDcpT & sn
             For i = 0 To UBound(hDcp)
@@ -350,11 +362,17 @@ Private Sub makeHeader(Optional ByVal cdsp_ranks As Long = 3)
         Next
     Next
     '   おすすめ個体値
-    cells(row - 1, col).value = SA1_ReccomendedIV
-    For i = 0 To UBound(hRcmIV)
-        cells(row, col).value = hRcmIV(i)
-        col = col + 1
+    cells(row - 1, col).value = SA1_ReccomendedIV1
+    cells(row, col).value = SA1_ReccomendedIV2
+    col = col + 1
+    For i = 1 To 3
+        cells(row - 1, col).value = Array(C_League1, C_League2, C_League3)(i - 1)
+        For j = 0 To UBound(hRcmIV)
+            cells(row, col).value = hRcmIV(j) & Trim(i)
+            col = col + 1
+        Next
     Next
+    '   接尾辞の非表示
     If Not shControls.chkShowSuffix Then
         Call switchHeaderSuffixes(False)
     End If
@@ -365,31 +383,51 @@ Sub sortNormally()
     Call sortTable(shSpeciesAnalysis1, Array(SPEC_Number, SPEC_Name))
 End Sub
 
+'
+Public Sub callMakeLeagueIVRank()
+'    Call makeHeader(cdps_ranks)
+    Call makeLeagueIVRank
+End Sub
+
 '   リーグ別おすすめ個体値の作成
 Private Sub makeLeagueIVRank(Optional ByVal srow As Long = 0, _
-                            Optional ByVal rnkNum As Integer = 20)
-    Dim rowr, cols, attr, tCP As Variant
-    Dim i As Integer
-    Dim species As String
+                            Optional ByVal rnkNum As Integer = 30, _
+                            Optional ByVal lrnkNum As Integer = 10)
+    Dim rowr, cols, attr, TCP, rnks As Variant
+    Dim i, j As Integer
+    Dim species, str As String
     Dim mon As Monster
     
     rowr = getRowRange(srow)
     cols = getColumnIndexes(shSpeciesAnalysis1, _
-            Array(SA1_LeagueIV1, SA1_LeagueIV2, SA1_Name, _
+            Array(SA1_ReccIV & "1", SA1_ReccIV & "2", SA1_ReccIV & "3", _
+            SA1_Name, _
             SA1_CDST_NormalAtkName & "1", SA1_CDST_SpecialAtkName & "1"))
-    tCP = Array(C_UpperCPl1, C_UpperCPl2)
-    '   ループ
+    TCP = Array(C_UpperCPl1, C_UpperCPl2, 0)
+    '   各行ループ
     With ListObjects(1).DataBodyRange
         For row = rowr(0) To rowr(1)
-            species = .cells(row, cols(2)).text
+            '   計算用モンスター生成
+            species = .cells(row, cols(3)).text
             Call getMonster(mon, species)
-            Call setAttacks(C_IdMtc, mon, .cells(row, cols(3)).text, .cells(row, cols(4)).text)
-            attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
-            For i = 0 To 1
+            '   技は、最強、最弱の順
+            Call setAttacks(C_IdMtc, mon, _
+                    Array(.cells(row, cols(4)).text), _
+                    Array(.cells(row, cols(5)).text))
+            '   リーグごとループ
+            For i = 2 To 0 Step -1
                 With .cells(row, cols(i))
-                    .value = getIvStr(getFitIndiv(mon, tCP(i), rnkNum))
-                    If .value = "" Then .value = " "
-                    .WrapText = False
+                    Range(.Offset(0, 0), .Offset(0, 3)).ClearContents
+                    rnks = getFitIndiv(mon, TCP(i), rnkNum, lrnkNum)
+                    If IsArray(rnks) Then
+                        .value = getIvStr(rnks(0))
+                        If rnks(0)(0)(0) < 15 Or rnks(0)(0)(1) < 15 Or rnks(0)(0)(2) < 15 Then
+                            .Offset(0, 1).value = getIvStr(rnks(1))
+                        End If
+                        .Offset(0, 2).value = rnks(0)(0)(3)
+                        .Offset(0, 3).value = rnks(2)(3)
+                        Range(.Offset(0, 0), .Offset(0, 1)).WrapText = False
+                    End If
                 End With
             Next
         Next
@@ -398,16 +436,15 @@ End Sub
 
 Private Function getIvStr(ByRef rnk As Variant) As String
     Dim i, drv, cur As Long
-    If Not IsArray(rnk) Then Exit Function
+'    If Not IsArray(rnk) Then Exit Function
     For i = 0 To UBound(rnk)
         drv = Fix(rnk(i)(3))
         If drv = 0 Then Exit For
         If cur <> drv Then
-            If getIvStr <> "" Then getIvStr = left(getIvStr, Len(getIvStr) - 2) & vbCrLf
-            getIvStr = getIvStr & drv & ": "
+            If getIvStr <> "" Then getIvStr = getIvStr & vbCrLf
+'            getIvStr = getIvStr & drv & ": "
             cur = drv
         End If
         getIvStr = getIvStr & Hex(rnk(i)(0)) & Hex(rnk(i)(1)) & Hex(rnk(i)(2)) & ", "
     Next
-    If getIvStr <> "" Then getIvStr = left(getIvStr, Len(getIvStr) - 2)
 End Function

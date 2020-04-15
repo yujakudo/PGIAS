@@ -913,7 +913,7 @@ Private Sub getValAndAddr(ByVal row As Long, ByRef colIdx As Variant, _
     Else
         With shIndividual.cells(row, colIdx)
             val = .value
-            addr = "=" & shIndividual.name & "!" & Replace(.Address, shname, "")
+            addr = "=" & shIndividual.name & "!" & Replace(.Address, shName, "")
         End With
     End If
 End Sub

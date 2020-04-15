@@ -39,26 +39,25 @@ End Sub
 
 '   リリースファイルの作成
 Private Sub ReleaseFile()
-    Dim vers As Variant
-    Dim fn(1), ver, branch, dir As String
+    Dim vers, notes As Variant
+    Dim fn(1), ver, branch, dir, line As String
     Dim settings As Object
     Dim i As Integer
     
     Call a_resetDoMacro
+    Set settings = getGlobalSettings()
     With shVersionHistory.ListObjects(1).DataBodyRange
-        vers = getRowValues(.cells(1, 1), Array(VH_Branch, VH_Version))
+        notes = getRowValues(.cells(1, 1), Array(VH_Branch, VH_Version, VH_Summary))
     End With
+    
+    vers = Array(notes(0), notes(1))
     If vers(0) = "" Or vers(1) = "" Then
         MsgBox "There is no branch name or version number."
         Exit Sub
     End If
     If vers(0) = "master" Then vers(0) = "" Else vers(0) = "_" & vers(0)
     vers(1) = "_" & Replace(vers(1), ".", "_")
-    Set settings = getGlobalSettings()
-    dir = settings(GS_DistDir)
-    If Not (left(dir, 1) = "/" Or left(dir, 1) = "\" Or left(dir, 2) = ":") Then
-        dir = ThisWorkbook.Path & "\" & dir
-    End If
+    dir = makeFullPath(settings(GS_DistDir))
     fn(0) = dir & "\" & settings(GS_FileName) & vers(0) & vers(1) & ".xlsm"
     fn(1) = dir & "\" & settings(GS_FileName) & vers(0) & ".xlsm"
     '   処理の開始
@@ -69,6 +68,15 @@ Private Sub ReleaseFile()
         ActiveWorkbook.SaveAs fileName:=fn(i), FileFormat:= _
             xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False
     Next
+    If settings(GS_Batch) <> "" Then
+        Shell makeFullPath(settings(GS_Batch)) & " """ & notes(1) & """ """ & notes(2) & """", vbNormalFocus
+    End If
     Application.DisplayAlerts = True
 End Sub
 
+Private Function makeFullPath(ByVal path As String)
+    If Not (left(path, 1) = "/" Or left(path, 1) = "\" Or left(path, 2) = ":") Then
+        path = ThisWorkbook.path & "\" & path
+    End If
+    makeFullPath = path
+End Function

@@ -261,7 +261,7 @@ Private Sub margeLog(ByRef log As Variant, ByVal isTest As Boolean)
         If tlog = "" Then
              MsgBox msgNoChange
         Else
-            fn = ThisWorkbook.Path & "\" & "PGImportLog.txt"
+            fn = ThisWorkbook.path & "\" & "PGImportLog.txt"
             fh = FreeFile
             Open fn For Output As #fh
             Print #fh, tlog;
@@ -286,6 +286,7 @@ Public Sub AllClear(Optional ByVal comfirm As Boolean = True)
     Call shCounter.initSheet         '   対策シートの初期化
     Call shCounting.clearAll          '   集計のクリア
     Call shList.clearAllList            '   リストクリア
+    Call shGuid.clearControls           '   取説クリア
     Call doMacro
     '   すべてのシート
     For Each sh In Worksheets

@@ -14,23 +14,23 @@ Const C_Ave As String = "平均値"
 '   最大値表の作成
 Sub makeMaximunValuesTable()
     Dim row, lrow As Long
-    Dim shname As String
+    Dim shName As String
     lrow = cells(rows.count, 1).End(xlUp).row
     For row = 1 To lrow
-        shname = cells(row, 1).text
-        If shname <> "" And shname <> C_Max And shname <> C_Ave Then
-            Call MakeATable(shname, cells(row, 2))
+        shName = cells(row, 1).text
+        If shName <> "" And shName <> C_Max And shName <> C_Ave Then
+            Call MakeATable(shName, cells(row, 2))
         End If
     Next
 End Sub
 
 '   最大値の表一つを作る
-Private Sub MakeATable(ByVal shname As String, ByVal cell As Range)
+Private Sub MakeATable(ByVal shName As String, ByVal cell As Range)
     Dim val As Variant
     Dim r As Range
-    With Worksheets(shname)
+    With Worksheets(shName)
         While cell.text <> ""
-            If shname = SH_Individual Then
+            If shName = SH_Individual Then
                 Set r = getIndivColumn(.ListObjects(1), cell.text)
             Else
                 Set r = .ListObjects(1).ListColumns(cell.text).Range
@@ -66,25 +66,25 @@ End Function
 '   最大値表の作成(式にする)
 Sub replaceFormulaOfMaximunValuesTable()
     Dim row, lrow As Long
-    Dim shname As String
+    Dim shName As String
     lrow = cells(rows.count, 1).End(xlUp).row
     For row = 1 To lrow
-        shname = cells(row, 1).text
-        If shname <> "" And shname <> C_Max And shname <> C_Ave Then
-            Call replaceATable(shname, cells(row, 2))
+        shName = cells(row, 1).text
+        If shName <> "" And shName <> C_Max And shName <> C_Ave Then
+            Call replaceATable(shName, cells(row, 2))
         End If
     Next
 End Sub
 
 '   最大値の表一つを作る
-Private Sub replaceATable(ByVal shname As String, ByVal cell As Range)
+Private Sub replaceATable(ByVal shName As String, ByVal cell As Range)
     Dim val As Variant
     Dim r As String
     Dim tblName As String
-    With Worksheets(shname)
+    With Worksheets(shName)
         tblName = .ListObjects(1).name
         While cell.text <> ""
-            If shname = shIndividual.name Then
+            If shName = shIndividual.name Then
                 r = getIndivFormula(.ListObjects(1), cell.text)
             Else
                 r = tblName & "[" & cell.text & "]"

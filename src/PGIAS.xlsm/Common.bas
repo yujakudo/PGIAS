@@ -1,6 +1,11 @@
 Attribute VB_Name = "Common"
 Option Explicit
 
+'   シート移動履歴
+Dim shHistory(10) As Object
+Dim shHistoryPos(2) As Integer
+
+
 '   List objectの取得
 Public Function getListObject(ByVal table As Variant) As ListObject
     Select Case TypeName(table)
@@ -568,8 +573,8 @@ Function fileDialog(ByVal filter As String, _
                 Optional ByVal baseName As String = "") As String
     Dim cur, fn As String
     cur = CurDir
-    ChDrive left(ThisWorkbook.Path, 2)
-    ChDir ThisWorkbook.Path & "\"
+    ChDrive left(ThisWorkbook.path, 2)
+    ChDir ThisWorkbook.path & "\"
     If isSave Then
         fn = Date
         fn = Replace(fn, "/", "")
@@ -641,4 +646,90 @@ Public Function getTimeStr(ByVal stime As Long, _
     End If
     Trim (min) & "'" & right("0" & Trim(sec), 2) & """"
 End Function
+
+'   シートが変わったので履歴に記憶
+Public Sub onSheetChange(ByVal sh As Object)
+    Dim npos As Integer
+    npos = nextHistoryPos(shHistoryPos(2))
+    '   現在位置が途中で、かつシートが同じ
+    If shHistoryPos(2) <> shHistoryPos(0) And shHistory(npos) Is sh Then
+        Exit Sub
+    End If
+    Set shHistory(npos) = sh
+    shHistoryPos(0) = npos
+    shHistoryPos(2) = npos
+    If shHistory(shHistoryPos(1)) Is Nothing Then
+        shHistoryPos(1) = npos
+    ElseIf npos = shHistoryPos(1) Then
+        shHistoryPos(1) = nextHistoryPos(npos)
+    End If
+End Sub
+
+Public Sub historyReset()
+    shHistoryPos(0) = 0
+    shHistoryPos(1) = 0
+    shHistoryPos(2) = 0
+End Sub
+
+'   履歴を前に移動
+Public Sub historyForward()
+Attribute historyForward.VB_ProcData.VB_Invoke_Func = "m\n14"
+    Call moveHistory(1)
+End Sub
+
+'   履歴を後に移動
+Public Sub historyBackward()
+Attribute historyBackward.VB_ProcData.VB_Invoke_Func = "n\n14"
+    Call moveHistory(-1)
+End Sub
+
+'   移動
+Private Sub moveHistory(ByVal dir As Integer)
+    Dim sh As Object
+    Dim state As Boolean
+    If (dir > 0 And shHistoryPos(2) = shHistoryPos(0)) _
+            Or (dir < 0 And shHistoryPos(2) = shHistoryPos(1)) Then Exit Sub
+    shHistoryPos(2) = nextHistoryPos(shHistoryPos(2), dir)
+    Set sh = shHistory(shHistoryPos(2))
+    If sh Is Nothing Then Set sh = trancateHistory(dir)
+    If sh Is Nothing Then Exit Sub
+    state = Application.EnableEvents
+    Application.EnableEvents = False
+    sh.Activate
+    Application.EnableEvents = state
+End Sub
+
+Private Function trancateHistory(ByVal dir As Integer) As Worksheet
+    Dim pos, lidx, npos As Integer
+    If dir > 0 Then lidx = 0 Else lidx = 1
+    pos = shHistoryPos(2)
+    '   現在位置が終端であれば、現在位置と終端を一つ戻す
+    If pos = shHistory(lidx) Then
+        While shHistory(shHistoryPos(2)) Is Nothing
+            If pos = shHistory(1 - lidx) Then Exit Function
+            shHistoryPos(2) = nextHistoryPos(pos, -dir)
+            shHistoryPos(lidx) = shHistoryPos(2)
+        Wend
+        trancateHistory = shHistory(shHistoryPos(2))
+        Exit Function
+    End If
+    While pos <> shHistoryPos(lidx)
+        npos = nextHistoryPos(pos, dir)
+        Set shHistory(pos) = shHistory(npos)
+        pos = npos
+    Wend
+    shHistoryPos(lidx) = nextHistoryPos(pos, -dir)
+    trancateHistory = shHistory(shHistoryPos(2))
+End Function
+
+'   ポインタの移動
+Private Function nextHistoryPos(ByVal pos As Integer, _
+            Optional ByVal dir As Integer = 1) As Integer
+    If dir > 0 Then
+        If pos = UBound(shHistory) Then nextHistoryPos = 0 Else nextHistoryPos = pos + 1
+    Else
+        If pos = 0 Then nextHistoryPos = UBound(shHistory) Else nextHistoryPos = pos - 1
+    End If
+End Function
+
 

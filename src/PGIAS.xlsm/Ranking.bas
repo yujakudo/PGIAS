@@ -987,11 +987,11 @@ Private Function setIVasAutoTarget(ByRef settings As Object, _
             ByRef CpUpper As Long) As Integer
     Dim amode, cname As String
     Dim rivs As Variant
-    Dim pos(2) As Integer
+    Dim pos As Integer
 
     setIVasAutoTarget = 0
     rivs = seachAndGetValues(species, SA1_Name, shSpeciesAnalysis1, _
-                            Array(SA1_LeagueIV1, SA1_LeagueIV2))
+                            Array(SA1_ReccIV & "1", SA1_ReccIV & "2"))
     amode = settings(C_AutoTarget)
     If amode = C_League1 Then
         CpUpper = C_UpperCPl1
@@ -1002,17 +1002,14 @@ Private Function setIVasAutoTarget(ByRef settings As Object, _
         rivs = rivs(1)
         setIVasAutoTarget = 2
     Else
-            Exit Function
+        atk = 15: def = 15: hp = 15
+        CpUpper = 0
+        setIVasAutoTarget = 3
+        Exit Function
     End If
-    pos(0) = InStr(rivs, vbCrLf)
-    If pos(0) > 0 Then
-        rivs = left(rivs, pos(0) - 1)
-    End If
-    pos(0) = InStr(rivs, ":")
-    If pos(0) < 1 Then Exit Function
-    pos(1) = InStr(rivs, ",")
-    If pos(1) < 1 Then pos(1) = Len(rivs) + 1
-    rivs = Trim(Mid(rivs, pos(0) + 1, pos(1) - pos(0) - 1))
+    pos = InStr(rivs, ",")
+    If pos < 1 Then Exit Function
+    rivs = Trim(left(rivs, pos - 1))
     atk = val("&H" + Mid(rivs, 1, 1))
     def = val("&H" + Mid(rivs, 2, 1))
     hp = val("&H" + Mid(rivs, 3, 1))

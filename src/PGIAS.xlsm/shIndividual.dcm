@@ -9,7 +9,7 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 
 '   フラグ
-Public Enum IND_CalsFlags
+Enum IND_CalsFlags
     F_CURRENT = 1
     F_PREDICTION = 2
     F_FORCEALL = 3
@@ -255,6 +255,13 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As IND_Cals
         If curPL = prPL And atkIdx(C_IdNormalAtk, 1) < 0 And atkIdx(C_IdSpecialAtk, 1) < 0 Then idx = -1
         Call setCDPS(Target, cols(5)(mode), self, enemy, idx)
     Next
+    '   現在値と同条件のとき、リーグ別潜在値セット。
+    If (force And F_CURRENT) Or (Not changedTargetAtk _
+                And Not changedPrPL And Not proced) Then
+        self.PL = curPL
+        Call calcMonPowers(self)
+        Call setPotential(Target, self, enemy)
+    End If
 End Sub
 
 '   ダメージとDPSのセット
@@ -356,7 +363,7 @@ End Sub
 Private Sub eraseColumns(columns As Variant, ByVal Target As Range)
     Dim col As Variant
     For Each col In columns
-        If col <> "" Then getColumn(col, Target).value = ""
+        If col <> "" Then getColumn(col, Target).ClearContents
     Next
 End Sub
 
@@ -375,13 +382,14 @@ Private Function getAtkIndex(ByRef self As Monster, ByVal prPL As Double)
                 Next
                 '   目標に仮設定した先頭の技のフラグが2でないなら、目標技はない
                 If self.attacks(atkIdx(atkClass, 1)).flag <> 2 Then
+                    atkIdx(atkClass, 1) = atkIdx(atkClass, 0)   '   手持ち
                     '   予測PLがないか、PLと同じなら予測数値はなし
-                    If prPL < 1 Or self.PL = prPL Then
-                        atkIdx(atkClass, 1) = -1
-                    Else    '   予測PLでわざの数値をだす
+'                    If prPL < 1 Or self.PL = prPL Then
+'                        atkIdx(atkClass, 1) = -1
+'                    Else    '   予測PLでわざの数値をだす
                         'ときにゲージ1
-                        atkIdx(atkClass, 1) = atkIdx(atkClass, 0)
-                    End If
+'                        atkIdx(atkClass, 1) = atkIdx(atkClass, 0)
+ '                   End If
                 End If
             End If
         End With
@@ -418,6 +426,73 @@ Private Function getSettingColumns()
             Array(IND_prMtcCDPS, IND_prMtcCDpsNormalAtkName, IND_prMtcCDpsSpecialAtkName, IND_prMtcCycle) _
     ))
 End Function
+
+Public Sub test()
+    Call setAtkParams(cells(40, 4))
+End Sub
+
+'   潜在値のセット
+'   monのわざの設定は変更される。
+Private Sub setPotential(ByVal Target As Range, ByRef mon As Monster, ByRef enemy As Monster)
+    Dim topCols, iv, sv As Variant
+    Dim i As Integer
+    Dim TCP(2), TCPlim(1), cpg, curPL As Double
+    
+    curPL = mon.PL
+    topCols = getColumnIndexes(Me, Array(IND_ptPL & "1", IND_ptPL & "2", IND_ptPL & "3"))
+    Range(cells(Target.row, topCols(0)), cells(Target.row, _
+            topCols(0) + (topCols(1) - topCols(0)) * 3 - 1)).ClearContents
+    If curPL = 0 Then Exit Sub
+    sv = seachAndGetValues(mon.species, SA1_Name, shSpeciesAnalysis1, _
+            Array(SA1_ReccTCP & "1", SA1_ReccTCPmin & "1", _
+            SA1_ReccTCP & "2", SA1_ReccTCPmin & "2", _
+            SA1_ReccTCP & "3", SA1_ReccTCPmin & "3", _
+            SA1_CDST_NormalAtkName & "1", SA1_CDST_SpecialAtkName & "1"))
+    If sv(0) = 0 Then Exit Sub
+    iv = getRowValues(Target, Array(IND_NormalAtk, IND_SpecialAtk1, IND_SpecialAtk2))
+    '   技の設定（最大,手持ち）
+    Call setAttacks(C_IdMtc, mon, Array(sv(6), iv(0)), Array(sv(7), iv(1), iv(2)))
+    cpg = mon.atkPower * Sqr(mon.defPower) * Sqr(mon.hpPower) / (getCPM(mon.PL) ^ 2) / 10
+    '   リーグ別ループ
+    For i = 0 To 2
+        TCPlim(0) = sv(i * 2)
+        TCPlim(1) = sv(i * 2 + 1)
+        If TCPlim(0) = 0 Then Exit For
+        If i < 2 Then
+            mon.PL = getPLbyCpg(Array(C_UpperCPl1, C_UpperCPl2)(i), cpg)
+        Else
+            mon.PL = 40
+        End If
+        If mon.PL < curPL Then GoTo Continue
+        Call calcMonPowers(mon)
+        '   mTCPの計算
+        '   わざ変
+        mon.atkIndex(0).selected = mon.atkIndex(0).lower
+        mon.atkIndex(1).selected = mon.atkIndex(1).lower
+        Call calcChargeCount(mon)
+        TCP(0) = calcTCP(mon, enemy)
+        '   手持ちわざ
+        mon.atkIndex(0).selected = mon.atkIndex(0).lower + 1
+        mon.atkIndex(1).selected = mon.atkIndex(1).lower + 1
+        Call calcChargeCount(mon)
+        TCP(1) = calcTCP(mon, enemy)
+        If mon.atkIndex(1).lower + 2 <= mon.atkIndex(1).upper Then
+            mon.atkIndex(1).selected = mon.atkIndex(1).lower + 2
+            Call calcChargeCount(mon)
+            TCP(2) = calcTCP(mon, enemy)
+            If TCP(2) > TCP(1) Then TCP(1) = TCP(2)
+        End If
+        With cells(Target.row, topCols(i))
+            .value = mon.PL
+            .Offset(0, 1).value = mon.CP
+            .Offset(0, 2).value = TCP(1)
+'            .Offset(0, 3).value = (TCP(1) - TCPlim(1)) / (TCPlim(0) - TCPlim(1)) * 100
+            .Offset(0, 3).value = TCP(0)
+            .Offset(0, 4).value = (TCP(0) - TCPlim(1)) / (TCPlim(0) - TCPlim(1)) * 100
+        End With
+Continue:
+    Next
+End Sub
 
 '   個体テーブルの調整。色を付ける
 Sub alignIndividualTable()
@@ -541,9 +616,9 @@ Public Function checkPL()
     End If
 End Function
 
-'   リーグ事目標PLの設定(未使用)
+'   リーグ別目標PLの設定
 Public Sub setTargetPL(ByVal rng As Range)
-    Dim row, col, tCP As Long
+    Dim row, col, TCP As Long
     Dim cols, attr As Variant
     Dim rrow(1) As Long
     With shIndividual.ListObjects(1)
@@ -560,20 +635,35 @@ Public Sub setTargetPL(ByVal rng As Range)
     col = getColumnIndex(IND_TargetPL, shIndividual)
     With shIndividual.ListObjects(1).DataBodyRange
         For row = rrow(0) To rrow(1)
-            attr = getRowValues(.cells(row, 1), cols)
-            If attr(0) <= 1500 Then
-                tCP = 1500
-            ElseIf attr(0) <= 2500 Then
-                tCP = 2500
-            Else
-                tCP = 0
-            End If
-            If tCP > 0 Then
-                .cells(row, col).value = _
-                    getPLbyCP(tCP, attr(1), attr(2), attr(3), attr(4))
-            End If
+            Call setATargetPL(.cells(row, col))
         Next
     End With
+End Sub
+
+'   リーグ別目標PL一行の設定
+Private Sub setATargetPL(ByVal cel As Range)
+    Dim PLs As Variant
+    Dim i, cnt As Integer
+    '   リーグ別PLを取得し空白を詰める
+    PLs = getRowValues(cel, Array(IND_ptPL & "1", IND_ptPL & "2", IND_ptPL & "3"))
+    cnt = 0
+    For i = 0 To UBound(PLs)
+        If PLs(i) > 0 Then
+            If i <> cnt Then PLs(cnt) = PLs(i)
+            cnt = cnt + 1
+        End If
+    Next
+    If cnt = 0 Then Exit Sub
+    '   PLが複数あるとき、同じ値が既に設定されて入れえ絵えばその次の値にする。
+    If cnt > 1 Then
+        For i = 0 To cnt - 2
+            If PLs(i) = cel.value Then
+                cel.value = PLs(i + 1)
+                Exit Sub
+            End If
+        Next
+    End If
+    cel.value = PLs(0)
 End Sub
 
 '   自動ターゲットPL
@@ -581,7 +671,7 @@ Public Function SetAutoTargetPL(Optional ByVal genType As String = "", _
                             Optional ByVal level As Double = C_MaxPL) As Integer
     Dim atRng As Range
     Dim league As Integer
-    Dim tCP As Long
+    Dim TCP As Long
     Dim cols As Variant
     Dim cel As Range
     Dim tPL As Double
@@ -594,23 +684,23 @@ Public Function SetAutoTargetPL(Optional ByVal genType As String = "", _
             atRng.value = level
         Case C_League1
             league = 1
-            tCP = C_UpperCPl1
+            TCP = C_UpperCPl1
         Case C_League2
             league = 2
-            tCP = C_UpperCPl2
+            TCP = C_UpperCPl2
         Case C_League3
             league = 3
             atRng.value = level
     End Select
     If league = 0 Then Exit Function
-    If tCP > 0 Then
+    If TCP > 0 Then
         atRng.ClearContents
         cols = Array(IND_CP, IND_PL, _
                 IND_AtkPower, IND_DefPower, IND_HP2)
         For Each cel In atRng
             attr = getRowValues(cel, cols)
             If attr(1) > 0 Then
-                tPL = getPLbyCP(tCP, attr(1), attr(2), attr(3), attr(4))
+                tPL = getPLbyCP(TCP, attr(1), attr(2), attr(3), attr(4))
                 If attr(1) <= tPL Then cel.value = tPL
             End If
         Next

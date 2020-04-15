@@ -89,6 +89,14 @@ Public Const IND_Endurance As String = "耐久力"
 Public Const IND_gTCP As String = "gTCP"
 Public Const IND_mTCP As String = "mTCP"
 
+Public Const IND_Potential = "潜在値_l"
+Public Const IND_ptPL = "PL_l"
+Public Const IND_ptCP = "CP_l"
+Public Const IND_ptTCP = "mTCP_1l"
+Public Const IND_ptTCPR = "%_p1l"
+Public Const IND_ptTCPa = "mTCP_2l"
+Public Const IND_ptTCPaR = "%_p2l"
+
 Public Const IND_GymBattle = "　_g"
 Public Const IND_MtcBattle = "　_m"
 Public Const IND_GymNormalAtkDamage As String = "ダメージ_gn"
@@ -126,8 +134,8 @@ Public Const IND_prDefPower As String = "防御力_pr"
 Public Const IND_DeltaDefPower As String = "Δ_DefP"
 Public Const IND_prEndurance As String = "耐久力_pr"
 Public Const IND_DeltaEndurance As String = "Δ_End"
-Public Const IND_prGTCP As String = "gTCP"
-Public Const IND_prMTCP As String = "mTCP"
+Public Const IND_prGTCP As String = "gTCP_pr"
+Public Const IND_prMTCP As String = "mTCP_pr"
 Public Const IND_DeltaGTCP As String = "Δ_gTCP"
 Public Const IND_DeltaMTCP As String = "Δ_mTCP"
 
@@ -293,11 +301,14 @@ Public Const SA1_SA_Dpe = "tDPE最大" & C_SpecialAttack
 Public Const SA1_SA_DpeAtkName = "ゲージtDPE技"
 Public Const SA1_SA_DpeValue = "ゲージtDPE"
 
-Public Const SA1_ReccomendedIV As String = "リーグ別おすすめ個体値"
-Public Const SA1_LeagueIV1 As String = "スーパー_iv"
-Public Const SA1_LeagueIV2 As String = "ハイパー_iv"
+Public Const SA1_ReccomendedIV1 As String = "おすすめ"
+Public Const SA1_ReccomendedIV2 As String = "個体値"
+Public Const SA1_ReccIV As String = "個体値_l"
+Public Const SA1_ReccIVlim As String = "(たまご)_l"
+Public Const SA1_ReccTCP As String = "mTCP_l"
+Public Const SA1_ReccTCPmin As String = "(min)_TCPl"
 
-Public Const SA1_LastColumn As String = SA1_LeagueIV2
+Public Const SA1_LastColumn As String = SA1_ReccTCPmin
 
 Public Const R_NormalAtkSpeciesSelect As String = "通常わざ種族選択"
 Public Const R_SpecialAtkSpeciesSelect As String = "ゲージわざ種族選択"
@@ -435,12 +446,13 @@ Public Const VH_Branch As String = "ブランチ"
 Public Const VH_Version As String = "Ver."
 Public Const VH_Date As String = "日付"
 Public Const VH_Article As String = "記事"
+Public Const VH_Summary As String = "要約"
 
 Public Const R_GlobalSettings As String = "全体設定"
 Public Const GS_FileName As String = "ファイル名"
 Public Const GS_BranchName As String = "ブランチ名"
 Public Const GS_DistDir As String = "ディレクトリ"
-Public Const GS_UseLimitedAttacksOnSpeciesAna As String = "種族分析で限定わざ"
+Public Const GS_Batch As String = "バッチ"
 
 
 '   メッセージ

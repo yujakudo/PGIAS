@@ -371,15 +371,15 @@ End Function
 
 '   目標PLの取得(下のgetPLbyCPに移行)
 Public Function getTargetPL( _
-            ByVal species As String, ByVal tCP As Long, _
+            ByVal species As String, ByVal TCP As Long, _
             ByVal iatk As Long, ByVal idef As Long, ByVal ihp As Long) As Double
     Dim cpg, tcpm, PL, CPM, CP As Double
     Dim row As Long
     Dim attrs As Variant
-    If species = "" Or tCP = 0 Then Exit Function
+    If species = "" Or TCP = 0 Then Exit Function
     attrs = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
     cpg = (iatk + attrs(0)) * Sqr(idef + attrs(1)) * Sqr(ihp + attrs(2)) / 10
-    tcpm = Sqr((tCP + 1) / cpg)
+    tcpm = Sqr((TCP + 1) / cpg)
     With shCpm.ListObjects(1)
         On Error GoTo Proc0
         row = WorksheetFunction.Match(tcpm, .ListColumns("CPM").DataBodyRange, -1)
@@ -393,7 +393,7 @@ Proc1:
             row = row + 1
             CPM = .ListColumns("CPM").DataBodyRange.cells(row, 1)
             CP = WorksheetFunction.Floor(cpg * CPM * CPM, 1)
-        Loop While CP > tCP
+        Loop While CP > TCP
         getTargetPL = .ListColumns("PL").DataBodyRange.cells(row, 1)
     End With
     Exit Function
@@ -403,20 +403,20 @@ End Function
 
 '   目標PLの取得
 '   atk, def,hpは現在のPower、PLは現在のPL
-Public Function getPLbyCP(ByVal tCP As Long, ByVal PL As Double, _
+Public Function getPLbyCP(ByVal TCP As Long, ByVal PL As Double, _
             ByVal atk As Double, _
             ByVal def As Double, _
             ByVal hp As Double) As Double
     Dim cpg, CPMc As Double
-    If tCP = 0 Or PL = 0 Then Exit Function
+    If TCP = 0 Or PL = 0 Then Exit Function
     CPMc = getCPM(PL)
     cpg = atk * Sqr(def) * Sqr(hp) / CPMc ^ 2 / 10
-    getPLbyCP = getPLbyCpg(tCP, cpg)
+    getPLbyCP = getPLbyCpg(TCP, cpg)
 End Function
 
 '   目標CPよりPLを得る2
 '   atk, def, hpは個体値
-Public Function getPLbyCP2(ByVal tCP As Long, _
+Public Function getPLbyCP2(ByVal TCP As Long, _
             ByVal species As String, _
             ByVal atk As Double, _
             ByVal def As Double, _
@@ -425,13 +425,13 @@ Public Function getPLbyCP2(ByVal tCP As Long, _
     Dim cpg As Double
     attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
     cpg = (attr(0) + atk) * Sqr(attr(1) + def) * Sqr(attr(2) + hp) / 10
-    getPLbyCP2 = getPLbyCpg(tCP, cpg)
+    getPLbyCP2 = getPLbyCpg(TCP, cpg)
 End Function
 
 '   CPG((種族値＋個体値)の重み積/10)よりPLを得る
-Public Function getPLbyCpg(ByVal tCP As Long, ByVal cpg As Double) As Double
+Public Function getPLbyCpg(ByVal TCP As Long, ByVal cpg As Double) As Double
     Dim CPM, tPL As Double
-    CPM = Sqr((tCP + 1) / cpg)
+    CPM = Sqr((TCP + 1) / cpg)
     tPL = getPLbyCPM(CPM, True)
     If getCPM(tPL) >= CPM Then tPL = tPL - 0.5
     If tPL < 1 Then tPL = 1
@@ -742,12 +742,12 @@ Public Function setWeatherToCell(ByVal cel As Range, _
 End Function
 
 '   自動目標（リーグ名）によるCP上限の取得
-Public Function getCpUpper(ByVal mode As String, _
+Public Function getCpUpper(ByVal league As String, _
                     Optional ByVal undefVal As Long = C_MaxLong) As Long
     getCpUpper = undefVal
-    If mode = C_League1 Then
+    If league = C_League1 Then
         getCpUpper = C_UpperCPl1
-    ElseIf mode = C_League2 Then
+    ElseIf league = C_League2 Then
         getCpUpper = C_UpperCPl2
     End If
 End Function
@@ -803,4 +803,9 @@ Public Function getResourceRequirment(ByVal curPL As Double, _
         End If
     Next
     getResourceRequirment = Array(candies, sands)
+End Function
+
+'   耐久力
+Public Function getEndurance(ByVal def As Double, ByVal hp As Double) As Double
+    getEndurance = Fix(hp) / (1000 / def + 1)
 End Function
