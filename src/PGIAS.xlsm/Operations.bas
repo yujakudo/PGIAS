@@ -93,8 +93,11 @@ Private Function rangeExpectation(ByVal Target As Range, _
     If cnum > 1 Then
         ReDim Preserve cand(cnum - 1)
         Call setInputList(Target, Join(cand, ","))
+        On Error GoTo Continue
         Target.Select
         SendKeys "%{Down}"
+Continue:
+        On Error GoTo 0
     End If
     Call enableEvent(True)
     rangeExpectation = True
@@ -452,6 +455,13 @@ Public Sub setTimeAndDate(ByVal rng As Range, ByVal start As Double)
     stime = Timer - start
     rng.Areas(1).value = getTimeStr(stime, "'")
     rng.Areas(2).value = Now
+End Sub
+
+'   ŒÂ‘Ì’l‚Ì16i”‚ğ10i”‚É•ÏŠ·‚·‚é
+Public Sub decimalizeIndivValue(ByVal Target As Range)
+    Dim c As Integer
+    c = Asc(UCase(left(Target.text, 1))) - 55
+    If 9 < c And c < 16 Then Target.value = c
 End Sub
 
 

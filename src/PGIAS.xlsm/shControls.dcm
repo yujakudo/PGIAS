@@ -10,7 +10,7 @@ Attribute VB_Exposed = True
 
 '   全てクリア
 Private Sub btnAllClear_Click()
-    Call AllClear(True)
+    Call allClear(True)
 End Sub
 
 '   イベント有効・自動計算
@@ -272,7 +272,7 @@ Private Sub margeLog(ByRef log As Variant, ByVal isTest As Boolean)
 End Sub
 
 '   全てクリア
-Public Sub AllClear(Optional ByVal comfirm As Boolean = True)
+Public Sub allClear(Optional ByVal comfirm As Boolean = True)
     Dim sh As Variant
     If comfirm Then
         If vbOK <> MsgBox(msgSureToAllClear, vbOKCancel) Then Exit Sub

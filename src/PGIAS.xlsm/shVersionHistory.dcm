@@ -63,7 +63,7 @@ Private Sub ReleaseFile()
     '   èàóùÇÃäJén
     Application.DisplayAlerts = False
     ActiveWorkbook.Save
-    Call shControls.AllClear(False)
+    Call shControls.allClear(False)
     For i = 0 To 1
         ActiveWorkbook.SaveAs fileName:=fn(i), FileFormat:= _
             xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False

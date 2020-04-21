@@ -10,7 +10,7 @@ Public Const C_UpperCPl1 As Long = 1500
 Public Const C_UpperCPl2 As Long = 2500
 Public Const C_MaxPL As Long = 40
 Public Const C_MaxLong As Long = 2000000000
-
+Public Const C_MaxDouble As Double = 1.7E+308
 Public Const C_Type As String = "タイプ"
 Public Const C_SpeciesName As String = "種族名"
 Public Const C_Nickname As String = "ニックネーム"

@@ -97,10 +97,15 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     ElseIf tcol = IND_Species Then
         Call speciesChange(Target)
     '   PL
-    ElseIf tcol = IND_CP Or tcol = IND_HP Or tcol = IND_fixPL Or tcol = IND_TargetPL _
-            Or tcol = IND_indATK Or tcol = IND_indDEF Or tcol = IND_indHP Then
+    ElseIf tcol = IND_CP Or tcol = IND_HP Or tcol = IND_fixPL Or tcol = IND_TargetPL Then
         shIndividual.Calculate
         Call enableEvent(False)
+        Call setAtkParams(Target)
+        Call enableEvent(True)
+    '   個体値
+    ElseIf tcol = IND_indATK Or tcol = IND_indDEF Or tcol = IND_indHP Then
+        Call enableEvent(False)
+        Call decimalizeIndivValue(Target)
         Call setAtkParams(Target)
         Call enableEvent(True)
     '   わざ
@@ -434,43 +439,83 @@ End Sub
 '   潜在値のセット
 '   monのわざの設定は変更される。
 Private Sub setPotential(ByVal Target As Range, ByRef mon As Monster, ByRef enemy As Monster)
-    Dim topCols, iv, sv As Variant
+    Dim topCols, TCPlim, TCP As Variant
     Dim i As Integer
-    Dim TCP(2), TCPlim(1), cpg, curPL As Double
+    Dim cpg, curPL As Double
     
-    curPL = mon.PL
     topCols = getColumnIndexes(Me, Array(IND_ptPL & "1", IND_ptPL & "2", IND_ptPL & "3"))
     Range(cells(Target.row, topCols(0)), cells(Target.row, _
             topCols(0) + (topCols(1) - topCols(0)) * 3 - 1)).ClearContents
-    If curPL = 0 Then Exit Sub
+    If mon.PL = 0 Then Exit Sub
+    '   わざの設定とTCP最大/最小の取得
+    cpg = getParameterForPotential(mon, TCPlim, Target)
+    If cpg = 0 Then Exit Sub
+    curPL = mon.PL
+    '   リーグ別ループ
+    For i = 0 To 2
+        If TCPlim(i)(0) = 0 Then Exit For
+        TCP = getPotentialTCP(mon, enemy, cpg, i)
+        If curPL <= mon.PL Then
+            With cells(Target.row, topCols(i))
+                .value = mon.PL
+                .Offset(0, 1).value = mon.CP
+                .Offset(0, 2).value = TCP(1)
+    '            .Offset(0, 3).value = (TCP(1) - TCPlim(1)) / (TCPlim(0) - TCPlim(1)) * 100
+                .Offset(0, 3).value = TCP(0)
+                .Offset(0, 4).value = (TCP(0) - TCPlim(i)(1)) / (TCPlim(i)(0) - TCPlim(i)(1)) * 100
+            End With
+        End If
+    Next
+End Sub
+
+'   潜在値計算のためのパラメータの取得
+'   戻り値はcpg
+Public Function getParameterForPotential(ByRef mon As Monster, ByRef TCPlim As Variant, _
+                                Optional ByVal Target As Range = Nothing) As Double
+    Dim iv, sv, c, atks As Variant
+    getParameterForPotential = 0
     sv = seachAndGetValues(mon.species, SA1_Name, shSpeciesAnalysis1, _
             Array(SA1_ReccTCP & "1", SA1_ReccTCPmin & "1", _
             SA1_ReccTCP & "2", SA1_ReccTCPmin & "2", _
             SA1_ReccTCP & "3", SA1_ReccTCPmin & "3", _
             SA1_CDST_NormalAtkName & "1", SA1_CDST_SpecialAtkName & "1"))
-    If sv(0) = 0 Then Exit Sub
-    iv = getRowValues(Target, Array(IND_NormalAtk, IND_SpecialAtk1, IND_SpecialAtk2))
+    If sv(0) = 0 Then Exit Function
+    TCPlim = Array(Array(sv(0), sv(1)), Array(sv(2), sv(3)), Array(sv(4), sv(5)))
+    If Target Is Nothing Then
+        atks = Array(Array(sv(6)), Array(sv(7)))
+    Else
+        iv = getRowValues(Target, Array(IND_NormalAtk, IND_SpecialAtk1, IND_SpecialAtk2))
+        atks = Array(Array(sv(6), iv(0)), Array(sv(7), iv(1), iv(2)))
+    End If
     '   技の設定（最大,手持ち）
-    Call setAttacks(C_IdMtc, mon, Array(sv(6), iv(0)), Array(sv(7), iv(1), iv(2)))
-    cpg = mon.atkPower * Sqr(mon.defPower) * Sqr(mon.hpPower) / (getCPM(mon.PL) ^ 2) / 10
-    '   リーグ別ループ
-    For i = 0 To 2
-        TCPlim(0) = sv(i * 2)
-        TCPlim(1) = sv(i * 2 + 1)
-        If TCPlim(0) = 0 Then Exit For
-        If i < 2 Then
-            mon.PL = getPLbyCpg(Array(C_UpperCPl1, C_UpperCPl2)(i), cpg)
-        Else
-            mon.PL = 40
-        End If
-        If mon.PL < curPL Then GoTo Continue
-        Call calcMonPowers(mon)
-        '   mTCPの計算
-        '   わざ変
-        mon.atkIndex(0).selected = mon.atkIndex(0).lower
-        mon.atkIndex(1).selected = mon.atkIndex(1).lower
-        Call calcChargeCount(mon)
-        TCP(0) = calcTCP(mon, enemy)
+    Call setAttacks(C_IdMtc, mon, atks(0), atks(1))
+    getParameterForPotential = mon.atkPower * Sqr(mon.defPower) * Sqr(mon.hpPower) / (getCPM(mon.PL) ^ 2) / 10
+End Function
+
+'   TCPの取得。わざ変、手持ち技、の順
+'   mon.PL, mon.CPは変更される
+Public Function getPotentialTCP(ByRef mon As Monster, ByRef enemy As Monster, _
+                                ByVal cpg As Double, _
+                                ByVal lidx As Integer) As Variant
+    Dim TCP() As Double
+    Dim cnt As Integer
+    
+    If lidx < 2 Then
+        mon.PL = getPLbyCpg(Array(C_UpperCPl1, C_UpperCPl2)(lidx), cpg)
+    Else
+        mon.PL = 40
+    End If
+    Call calcMonPowers(mon)
+    '   mTCPの計算
+    '   わざ変
+    ReDim TCP(2)
+    cnt = 1
+    mon.atkIndex(0).selected = mon.atkIndex(0).lower
+    mon.atkIndex(1).selected = mon.atkIndex(1).lower
+    Call calcChargeCount(mon)
+    TCP(0) = calcTCP(mon, enemy)
+    If mon.atkIndex(0).lower + 1 <= mon.atkIndex(0).upper Then
+        cnt = 2
         '   手持ちわざ
         mon.atkIndex(0).selected = mon.atkIndex(0).lower + 1
         mon.atkIndex(1).selected = mon.atkIndex(1).lower + 1
@@ -482,17 +527,10 @@ Private Sub setPotential(ByVal Target As Range, ByRef mon As Monster, ByRef enem
             TCP(2) = calcTCP(mon, enemy)
             If TCP(2) > TCP(1) Then TCP(1) = TCP(2)
         End If
-        With cells(Target.row, topCols(i))
-            .value = mon.PL
-            .Offset(0, 1).value = mon.CP
-            .Offset(0, 2).value = TCP(1)
-'            .Offset(0, 3).value = (TCP(1) - TCPlim(1)) / (TCPlim(0) - TCPlim(1)) * 100
-            .Offset(0, 3).value = TCP(0)
-            .Offset(0, 4).value = (TCP(0) - TCPlim(1)) / (TCPlim(0) - TCPlim(1)) * 100
-        End With
-Continue:
-    Next
-End Sub
+    End If
+    ReDim Preserve TCP(cnt - 1)
+    getPotentialTCP = TCP
+End Function
 
 '   個体テーブルの調整。色を付ける
 Sub alignIndividualTable()

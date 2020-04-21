@@ -615,7 +615,7 @@ Public Function calcChargeCount(ByRef mon As Monster) As Boolean
     End If
     charge = mon.attacks(mon.atkIndex(0).selected).normal.charge
     If charge = 0 Then
-        mon.chargeCount = 1.7E+308
+        mon.chargeCount = C_MaxDouble
         calcChargeCount = False
     Else
         calcChargeCount = True
@@ -1546,11 +1546,15 @@ Public Function calcTCP(ByRef self As Monster, ByRef enemy As Monster, _
     Call calcADamage(idx, self, enemy, True)
     idx = atkIdx(1)
     Call calcADamage(idx, self, enemy, True)
-    With self
-        damage = .attacks(atkIdx(0)).damage * self.chargeCount + .attacks(atkIdx(1)).damage
-        period = .attacks(atkIdx(0)).idleTime * self.chargeCount + .attacks(atkIdx(1)).idleTime
-    End With
-    calcTCP = damage / period * getEndurance(self.defPower, self.hpPower)
+    If 0 < self.chargeCount And self.chargeCount < C_MaxDouble Then
+        With self
+            damage = .attacks(atkIdx(0)).damage * self.chargeCount + .attacks(atkIdx(1)).damage
+            period = .attacks(atkIdx(0)).idleTime * self.chargeCount + .attacks(atkIdx(1)).idleTime
+        End With
+        calcTCP = damage / period * getEndurance(self.defPower, self.hpPower)
+    Else
+        calcTCP = 0
+    End If
 End Function
 
 
