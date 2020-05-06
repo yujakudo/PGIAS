@@ -185,7 +185,7 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As IND_Cals
     Dim prPL As Double
     Dim changed(1), changedTargetAtk, changedCurPL, changedPrPL, proced As Boolean
     
-    If Not getIndividual(Target, self) Then Exit Sub
+    If Not getIndividual(Target, self) And force = 0 Then Exit Sub
     '   変化した列タイトルの取得と、その概要の真偽値
     tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).text
     changed(C_IdNormalAtk) = InStr(tcol, C_NormalAttack) > 0
@@ -257,6 +257,7 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As IND_Cals
         Call setPotential(Target, self, enemy)
     End If
 End Sub
+
 
 '   ダメージとDPSのセット
 Private Sub setDamageAndDPS(ByVal Target As Range, ByVal columns As Variant, _
