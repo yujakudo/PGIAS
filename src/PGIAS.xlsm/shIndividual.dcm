@@ -15,51 +15,40 @@ Enum IND_CalsFlags
     F_FORCEALL = 3
 End Enum
 
+'   シートアクティブ
+'   コンボボックスの設定
+Private Sub Worksheet_Activate()
+    Call setComboMenu(cmbJump, _
+            Array(shSpecies, shSpeciesAnalysis1, _
+                    shNormalAttack, shSpecialAttack), _
+            Array(IMAP_R_Settings))
+End Sub
+
+'   移動コンボボックスの変更
+Private Sub cmbJump_Change()
+    Dim sh As Worksheet
+    Dim species As String
+    Set sh = getSheetFromCombo(cmbJump)
+    If sh Is Nothing Then Exit Sub
+    '   複数セル選択かテーブルデータ外なら単に移動
+    If ActiveCell.CountLarge <> 1 Or _
+        Application.Intersect(ActiveCell, ListObjects(1).DataBodyRange) Is Nothing Then
+        Call jumpTo(sh)
+    ElseIf sh Is shSpecies Or sh Is shSpeciesAnalysis1 Then
+        Call jumpToSpeciesSheet(sh)
+    ElseIf sh Is shNormalAttack Or sh Is shSpecialAttack Then
+        If selectSpeciesForAtkTable() Then Call jumpTo(sh, True)
+    ElseIf Not sh Is Nothing Then   '  個体マップ
+        Call jumpToIndMap(sh, chkSameType.value)
+    End If
+    Call enableEvent(False)
+    cmbJump.value = ""
+    Call enableEvent(True)
+End Sub
+
 '   リーグ別目標設定ボタン
 Private Sub btnSetTarget_Click()
     Call setTargetPL(Selection)
-End Sub
-
-'   わざを見るボタン
-Private Sub btnShowAtk_Click()
-    Call ClickShowAttack
-End Sub
-
-Private Sub btnShowAtk2_Click()
-    Call ClickShowAttack
-End Sub
-
-'   マップで見るボタン
-Private Sub btnShowMap_Click()
-    Dim species As String
-    Dim name As String
-    species = getSpeciesFromCell(ActiveCell)
-    name = getColumn(IND_Nickname, ActiveCell).text
-    If species = "" Then Exit Sub
-    If chkSameType.value Then
-        Call setSameTypeToMap(species, shIndivMap.Range(R_IndivMapTypeSelect))
-    End If
-    shIndivMap.Activate
-    shIndivMap.Range(R_IndivMapIndivSelect).value = name
-End Sub
-
-'   種属表をみる
-Private Sub btnShowSpeciesTable_Click()
-    Dim species As String
-    Dim row As Long
-    If ActiveCell.CountLarge <> 1 Or _
-        Application.Intersect(ActiveCell, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
-    species = getColumn(IND_Species, ActiveCell).text
-    With shSpecies
-        row = searchRow(species, SPEC_Name, .ListObjects(1))
-        .Activate
-        .ListObjects(1).DataBodyRange.cells(row, 1).Activate
-    End With
-    With shSpeciesAnalysis1
-        row = searchRow(species, SA1_Name, .ListObjects(1))
-        .Activate
-        .ListObjects(1).DataBodyRange.cells(row, 1).Activate
-    End With
 End Sub
 
 '   セルの選択
@@ -432,10 +421,6 @@ Private Function getSettingColumns()
     ))
 End Function
 
-Public Sub test()
-    Call setAtkParams(cells(40, 4))
-End Sub
-
 '   潜在値のセット
 '   monのわざの設定は変更される。
 Private Sub setPotential(ByVal Target As Range, ByRef mon As Monster, ByRef enemy As Monster)
@@ -485,6 +470,7 @@ Public Function getParameterForPotential(ByRef mon As Monster, ByRef TCPlim As V
         atks = Array(Array(sv(6)), Array(sv(7)))
     Else
         iv = getRowValues(Target, Array(IND_NormalAtk, IND_SpecialAtk1, IND_SpecialAtk2))
+        If iv(0) = "" Or iv(1) = "" Then Exit Function
         atks = Array(Array(sv(6), iv(0)), Array(sv(7), iv(1), iv(2)))
     End If
     '   技の設定（最大,手持ち）

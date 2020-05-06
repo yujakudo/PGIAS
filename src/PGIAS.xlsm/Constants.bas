@@ -199,6 +199,8 @@ Public Const SPEC_NormalAttack As String = C_NormalAttack
 Public Const SPEC_NormalAttackLimited As String = "限定" & C_NormalAttack
 Public Const SPEC_SpecialAttack As String = C_SpecialAttack
 Public Const SPEC_SpecialAttackLimited As String = "限定" & C_SpecialAttack
+Public Const SPEC_EvolvedFrom As String = "進化元"
+Public Const SPEC_EvolvedTo As String = "進化先"
 
 
 '   わざ
@@ -471,6 +473,7 @@ Public Const msgMakingSheet As String = "{0}シートを作成しています。"
 Public Const msgMaking As String = "{0}を作成しています。"
 Public Const msgReseting As String = "{0}をリセットしています。"
 Public Const msgInitializing As String = "{0}を初期化しています。"
+Public Const msgSee As String = "{0}を見る"
 
 Public Const msgSetColorToTypesOnTheSheet As String = "{0}シートのタイプに色を付けています。"
 Public Const msgSetColorToTypesAndAttcksOnTheSheet As String = "{0}シートのタイプとわざ名に色を付けています。"
@@ -483,11 +486,14 @@ Public Const msgColumnDoesNotExist As String = "{0}シートに「{1}」という列はあり
 Public Const msgNoIdentifier As String = "{0}シートの{1}行{2}列に「{3}」がありません。"
 Public Const msgColumnDoesNotExistOnTable As String = "「{0}」に「{1}」という列はありません。"
 
+
 '   shSpecies
 Public Const msgAttackIsLimited As String = "「{0}」を種族シートに追加します。「{0}」は限定わざですか？" _
                 & vbCrLf & "[はい]=限定わざ、[いいえ]=普通のわざ、[キャンセル]=追加しない"
 '   shNormalAttack, shSpecialAttack
 Public Const msgResetSelectedAttack As String = "わざ名の選択をリセットしています。"
+Public Const msgSelectingAttack As String = "わざを選択しています。"
+
 '   shSpeciesAnalysis1
 Public Const msgSetNewSpeciesToSpeciesAnalysis1Sheet As String = "種族分析シートに種族を追加しています｡"
 '   shIndividual
@@ -509,4 +515,8 @@ Public Const msgDoesOpenLog As String = "ログがあります。開きますか？"
 Public Const msgNoChange As String = "変更はありません。"
 '   List
 Public Const msgClearList As String = "リスト {0} をクリアしています。"
+'   shFilter
+Public Const msgAlreadyExists As String = "「{0}」は既にあります。"
+Public Const msgNoName As String = "#{0}にニックネームがありません。"
+Public Const msgSureToClear As String = "クリアしてよろしいですか？"
 

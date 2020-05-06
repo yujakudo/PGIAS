@@ -736,15 +736,20 @@ Private Function getSortedIndex(ByVal vals As Variant) As Variant
     getSortedIndex = idx
 End Function
 
+'   指定種族と同じタイプを設定
 Public Sub setSameTypeToMap(ByVal species As String, ByVal rng As Range)
     Dim stype As Variant
-    stype = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2))
-    enableEvent False
-    With rng
-        .cells(1, 1).value = stype(0)
-        .cells(1, 2).value = stype(1)
-    End With
-    enableEvent True
+    If species = "" Then
+        rng.ClearContents
+    Else
+        stype = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2))
+        enableEvent False
+        With rng
+            .cells(1, 1).value = stype(0)
+            .cells(1, 2).value = stype(1)
+        End With
+        enableEvent True
+    End If
 End Sub
 
 

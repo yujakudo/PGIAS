@@ -35,6 +35,7 @@ End Sub
 Public Function speciesExpectation(ByVal Target As Range) As Boolean
     Dim txt As String
     Dim rng As Range
+    If IsNull(Target.text) Then Exit Function
     txt = StrConv(Target.text, vbKatakana)
     Set rng = shSpecies.ListObjects(1).ListColumns(SPEC_Name).Range
     speciesExpectation = rangeExpectation(Target, rng, txt)
@@ -137,14 +138,14 @@ Sub ClickShowAttack()
     With ActiveCell
         If .ListObject Is Nothing Then Exit Sub
         If .row < .ListObject.DataBodyRange.row Then Exit Sub
-        doMacro ("わざを選択しています。")
+        Call doMacro(msgSelectingAttack)
         If selectSpeciesForAtkTable() Then
             colTitle = .ListObject.HeaderRowRange.cells(1, .column).text
             Set sh = shNormalAttack
             If getAtkClassIndex(colTitle) = C_IdSpecialAtk Then
                 Set sh = shSpecialAttack
             End If
-            sh.Activate
+            Call jumpTo(sh)
         End If
         Call doMacro
     End With
@@ -461,7 +462,110 @@ End Sub
 Public Sub decimalizeIndivValue(ByVal Target As Range)
     Dim c As Integer
     c = Asc(UCase(left(Target.text, 1))) - 55
-    If 9 < c And c < 16 Then Target.value = c
+    If 9 < c And c < 16 Then
+        Target.value = c
+    ElseIf Target.value = 0 And Target.text <> "0" Then
+        Target.ClearContents
+    End If
 End Sub
 
+'   コンボボックスのシート選択メニュー作成
+Public Sub setComboMenu(ByRef cmb As ComboBox, _
+                    Optional ByRef shs As Variant = Nothing, _
+                    Optional ByRef names As Variant = Nothing)
+    Dim sh, nm, sheets As Variant
+    With cmb
+        .Clear
+        If IsArray(shs) Then
+            For Each sh In shs
+                .AddItem sh.name
+            Next
+        End If
+        If IsArray(names) Then
+            For Each nm In names
+                sheets = getSheetsByName(nm)
+                For Each sh In sheets
+                    .AddItem sh.name
+                Next
+            Next
+        End If
+    End With
+End Sub
+
+'   コンボボックスの値よりワークシートを得る
+Public Function getSheetFromCombo(ByRef cmb As ComboBox) As Worksheet
+    Dim sh As Variant
+    With cmb
+        For Each sh In Worksheets
+            If .value = sh.name Then
+                Set getSheetFromCombo = sh
+                Exit For
+            End If
+        Next
+    End With
+End Function
+
+'   種族、種族分析シートに移動
+Public Sub jumpToSpeciesSheet(ByVal sh As Worksheet, Optional ByVal both As Boolean = True)
+    Dim sha As Worksheet
+    Dim species As String
+    If sh Is shSpeciesAnalysis1 Then Set sha = shSpecies Else Set sha = shSpeciesAnalysis1
+    species = getSpeciesFromCell()
+    If species <> "" Then
+        If both Then Call activateSpeciesSheet(sha, species, False)
+        Call activateSpeciesSheet(sh, species, True)
+    End If
+End Sub
+
+'   種族、種族分析シートに移動
+Private Sub activateSpeciesSheet(ByVal sh As Worksheet, _
+                    ByVal species As String, ByVal log As Boolean)
+    Dim row As Long
+    With sh
+        row = searchRow(species, C_SpeciesName, .ListObjects(1))
+        Call jumpTo(.ListObjects(1).DataBodyRange.cells(row, 1), log)
+    End With
+End Sub
+
+'   わざシートに移動
+Public Sub jumpToAttackSheet(ByVal sh As Worksheet)
+    Call doMacro(msgSelectingAttack)
+    Call selectSpeciesForAtkTable
+    Call doMacro
+    Call jumpTo(sh, True)
+End Sub
+
+'   個体マップに移動
+Public Sub jumpToIndMap(ByVal sh As Worksheet, ByVal sameType As Boolean)
+    Dim species As String
+    Dim name As String
+    '   絞り込み処理
+    species = getSpeciesFromCell()
+    name = getColumn(IND_Nickname, ActiveCell).text
+    If species <> "" Then
+        If sameType Then
+            Call setSameTypeToMap(species, sh.Range(IMAP_R_TypeSelect))
+        Else
+            Call setSameTypeToMap("", sh.Range(IMAP_R_TypeSelect))
+        End If
+        sh.Range(IMAP_R_IndivSelect).value = name
+    End If
+    Call jumpTo(sh)
+End Sub
+
+'   種族マップに移動
+Public Sub jumpToSpecMap(ByVal sh As Worksheet, ByVal sameType As Boolean)
+    Dim species As String
+    Dim stype As Variant
+    species = getSpeciesFromCell()
+    If species <> "" Then
+        If sameType Then
+            Call setSameTypeToMap(species, sh.Range(R_SpeciesMapTypeSelect))
+        Else
+            Call setSameTypeToMap("", sh.Range(R_SpeciesMapTypeSelect))
+        End If
+        sh.Range(R_SpeciesMapSpeciesSelect).value = species
+    End If
+    Call jumpTo(sh)
+End Sub
 

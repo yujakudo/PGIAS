@@ -809,3 +809,54 @@ End Function
 Public Function getEndurance(ByVal def As Double, ByVal hp As Double) As Double
     getEndurance = Fix(hp) / (1000 / def + 1)
 End Function
+
+'   進化系統の取得
+'   partは前、自分、先の順の3文字で指定。" -0"の何れかがいらない、その他は必要の意。
+Public Function getEvolutionalyLine(ByVal species As String, ByVal part As String, _
+                            Optional ByVal retType As String = "array") As Variant
+    Dim arr(2) As Variant
+    Dim lp As Integer
+    lp = Len(part)
+    If lp = 0 Then Exit Function
+    If InStr(" -0", Mid(part, 1, 1)) < 1 Then
+        arr(0) = traceEvolution(species, -1)
+    End If
+    If lp > 1 Then
+        If InStr(" -0", Mid(part, 2, 1)) < 1 Then
+            arr(1) = species
+        End If
+    End If
+    If lp > 2 Then
+        If InStr(" -0", Mid(part, 3, 1)) < 1 Then
+        arr(2) = traceEvolution(species, 1)
+        End If
+    End If
+    getEvolutionalyLine = joinStrList(arr)
+    If LCase(Mid(retType, 1, 3)) = "arr" Then
+        getEvolutionalyLine = Split(getEvolutionalyLine, ",")
+    End If
+End Function
+
+Private Function traceEvolution(ByVal species As String, _
+                        Optional ByVal dir As Integer = 0) As String
+    Dim row, col, i, lim As Long
+    Dim ng As Variant
+    Dim ng2s() As String
+    row = searchRow(species, SPEC_Name, shSpecies)
+    If dir > 0 Then
+        col = getColumnIndex(SPEC_EvolvedTo, shSpecies)
+    Else
+        col = getColumnIndex(SPEC_EvolvedFrom, shSpecies)
+    End If
+    ReDim ng2s(0)
+    ng2s(0) = shSpecies.ListObjects(1).DataBodyRange.cells(row, col).text
+    If ng2s(0) <> "" Then
+        ng = Split(ng2s(0), ",")
+        lim = UBound(ng)
+        ReDim Preserve ng2s(lim + 1)
+        For i = 0 To lim
+            ng2s(i + 1) = traceEvolution(ng(i), dir)
+        Next
+    End If
+    traceEvolution = joinStrList(ng2s, dir)
+End Function

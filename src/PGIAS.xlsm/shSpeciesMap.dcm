@@ -63,6 +63,7 @@ Public Sub MakeSpeciesMap()
     Set settings = getSettings(R_SpeciesMapSettings)
     Call clearInputs
     '   ƒf[ƒ^—ñ‚Ìì¬
+    Call shSpeciesAnalysis1.sortNormally
     With shSpeciesAnalysis1.ListObjects(1)
         Set src = Union( _
             .ListColumns(settings(C_XAxis)).DataBodyRange, _

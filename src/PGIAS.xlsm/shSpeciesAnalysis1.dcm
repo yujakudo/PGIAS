@@ -11,22 +11,36 @@ Attribute VB_Exposed = True
 '   cDPSの表示順位数
 Const cdps_ranks As Long = 5
 
-'   マップを見るボタン
-Private Sub btnShowMap_Click()
-    Dim species As String
-    species = getSpeciesFromCell(ActiveCell)
-    If species = "" Then Exit Sub
-    If chkSameType.value Then
-        Call setSameTypeToMap(species, shSpeciesMap.Range(R_SpeciesMapTypeSelect))
-    End If
-    shSpeciesMap.Activate
-    shSpeciesMap.Range(R_SpeciesMapSpeciesSelect).value = species
+
+'   シートアクティブ
+'   コンボボックスの設定
+Private Sub Worksheet_Activate()
+    Call setComboMenu(cmbJump, Array( _
+            shSpecies, shNormalAttack, shSpecialAttack, shSpeciesMap))
 End Sub
 
-'   わざを見るボタン
-Private Sub btnShowAtk_Click()
-    Call ClickShowAttack
+'   移動コンボボックスの変更
+Private Sub cmbJump_Change()
+    Dim sh As Worksheet
+    Dim species As String
+    Set sh = getSheetFromCombo(cmbJump)
+    If sh Is Nothing Then Exit Sub
+    '   複数セル選択かテーブルデータ外なら単に移動
+    If ActiveCell.CountLarge <> 1 Or _
+        Application.Intersect(ActiveCell, ListObjects(1).DataBodyRange) Is Nothing Then
+        Call jumpTo(sh)
+    ElseIf sh Is shSpecies Then
+        Call jumpToSpeciesSheet(sh, False)
+    ElseIf sh Is shNormalAttack Or sh Is shSpecialAttack Then
+        Call jumpToAttackSheet(sh)
+    ElseIf sh Is shSpeciesMap Then
+        Call jumpToSpecMap(sh, chkSameType.value)
+    End If
+    Call enableEvent(False)
+    cmbJump.value = ""
+    Call enableEvent(True)
 End Sub
+
 
 '   新しい種族の行を加える（種族シートがソートされている必要がある）
 Public Sub addNewSpecies(Optional ByVal withLimitedAtk As Boolean = True)
@@ -190,12 +204,6 @@ Private Sub makeParameters(Optional ByVal srow As Long = 0)
             .cells(row, cels(6)).value = getEndurance(def, hp)
         Next
     End With
-End Sub
-
-Public Sub callMakeAtkAna()
-'    Call makeHeader(CDPS_RANKS)
-    Call makeAtkAna(0, 5, 0)
-    Call makeAtkAna(1, 5, 0)
 End Sub
 
 '   わざ分析の作成
@@ -381,12 +389,6 @@ End Sub
 '   ソート
 Sub sortNormally()
     Call sortTable(shSpeciesAnalysis1, Array(SPEC_Number, SPEC_Name))
-End Sub
-
-'
-Public Sub callMakeLeagueIVRank()
-'    Call makeHeader(cdps_ranks)
-    Call makeLeagueIVRank
 End Sub
 
 '   リーグ別おすすめ個体値の作成

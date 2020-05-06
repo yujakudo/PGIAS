@@ -8,10 +8,23 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 
+'   セーブ前。
+'   入力規則をクリアする
 Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
     Call setInputList
 End Sub
 
+'   ファイルオープン
+'   最初のシートのActivateイベントを無理やり発生させる
+Private Sub Workbook_Open()
+    Dim sh As Worksheet
+    Set sh = ActiveSheet
+    shLicenseAgreement.Activate
+    sh.Activate
+End Sub
+
+'   シートアクティブ。
+'   履歴記録
 Private Sub Workbook_SheetActivate(ByVal sh As Object)
     Call onSheetChange(sh)
 End Sub

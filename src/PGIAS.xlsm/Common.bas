@@ -116,7 +116,8 @@ End Function
 
 '   テーブル上の列を検索し、行番号を取得する
 Public Function searchRow(ByVal key As Variant, ByVal column As Variant, _
-                    ByVal table As Variant) As Long
+                            ByVal table As Variant, _
+                    Optional ByVal ignoreError As Boolean = False) As Long
     If key = "" Then
         Exit Function
     End If
@@ -126,7 +127,8 @@ Public Function searchRow(ByVal key As Variant, ByVal column As Variant, _
     End With
     Exit Function
 Err:
-    MsgBox msgstr(msgKeyDoesNotExist, Array(getListObject(table).name, column, key))
+    If Not ignoreError Then _
+        MsgBox msgstr(msgKeyDoesNotExist, Array(getListObject(table).name, column, key))
 End Function
 
 '   テーブルを検索し、指定の列の値を取得する
@@ -651,11 +653,15 @@ End Function
 Public Sub onSheetChange(ByVal sh As Object)
     Dim npos As Integer
     npos = nextHistoryPos(shHistoryPos(2))
+'    Debug.Print msgstr("Try to log {0} on ({1})", Array(sh.name, npos))
     '   現在位置が途中で、かつシートが同じ
     If shHistoryPos(2) <> shHistoryPos(0) And shHistory(npos) Is sh Then
+        shHistoryPos(2) = npos
+        Debug.Print msgstr("pos: {0},{1},{2}", shHistoryPos)
         Exit Sub
     End If
     Set shHistory(npos) = sh
+'    Debug.Print msgstr("set {0} to ({1})", Array(shHistory(npos).name, npos))
     shHistoryPos(0) = npos
     shHistoryPos(2) = npos
     If shHistory(shHistoryPos(1)) Is Nothing Then
@@ -663,6 +669,29 @@ Public Sub onSheetChange(ByVal sh As Object)
     ElseIf npos = shHistoryPos(1) Then
         shHistoryPos(1) = nextHistoryPos(npos)
     End If
+'    Debug.Print msgstr("pos: {0},{1},{2}", shHistoryPos)
+End Sub
+
+'   シートをまたいで移動
+Public Sub jumpTo(ByVal sbj As Variant, Optional ByVal log As Boolean = True)
+    Dim sh As Worksheet
+    Dim cel As Range
+    Dim state As Boolean
+    If TypeName(sbj) = "Range" Then
+        Set sh = sbj.Parent
+        Set cel = sbj
+    Else
+        Set sh = sbj
+        Set cel = Nothing
+    End If
+    If Not ActiveSheet Is sh Then
+        state = Application.EnableEvents
+        Application.EnableEvents = False
+        sh.Activate
+        Application.EnableEvents = state
+        If log Then Call onSheetChange(sh)
+    End If
+    If Not cel Is Nothing Then Application.Goto cel
 End Sub
 
 Public Sub historyReset()
@@ -691,11 +720,14 @@ Private Sub moveHistory(ByVal dir As Integer)
             Or (dir < 0 And shHistoryPos(2) = shHistoryPos(1)) Then Exit Sub
     shHistoryPos(2) = nextHistoryPos(shHistoryPos(2), dir)
     Set sh = shHistory(shHistoryPos(2))
+'    Debug.Print msgstr("move to  {0}({1})", Array(sh.name, shHistoryPos(2)))
+'    Debug.Print msgstr("pos: {0},{1},{2}", shHistoryPos)
     If sh Is Nothing Then Set sh = trancateHistory(dir)
     If sh Is Nothing Then Exit Sub
     state = Application.EnableEvents
     Application.EnableEvents = False
     sh.Activate
+    ActiveCell.Activate
     Application.EnableEvents = state
 End Sub
 
@@ -732,4 +764,25 @@ Private Function nextHistoryPos(ByVal pos As Integer, _
     End If
 End Function
 
+
+'   コンマ区切りの文字列の連結
+Public Function joinStrList(ByVal sl As Variant, _
+                    Optional ByVal dir As Integer = 1) As String
+    Dim lim(1), i As Integer
+    If dir > 0 Then
+        dir = 1: lim(0) = 0: lim(1) = UBound(sl)
+    Else
+        dir = -1: lim(1) = 0: lim(0) = UBound(sl)
+    End If
+    joinStrList = ""
+    For i = lim(0) To lim(1) Step dir
+        If IsArray(sl(i)) Then
+            sl(i) = joinStrList(sl(i), dir)
+        End If
+        If sl(i) <> "" Then
+            If joinStrList <> "" Then joinStrList = joinStrList & ","
+            joinStrList = joinStrList & sl(i)
+        End If
+    Next
+End Function
 
