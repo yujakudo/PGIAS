@@ -21,29 +21,13 @@ Private Sub Worksheet_Activate()
     Call setComboMenu(cmbJump, _
             Array(shSpecies, shSpeciesAnalysis1, _
                     shNormalAttack, shSpecialAttack), _
-            Array(IMAP_R_Settings))
+            Array(IMAP_R_Settings), _
+            Array(cmdFilterReset, cmdSortReset))
 End Sub
 
 '   移動コンボボックスの変更
 Private Sub cmbJump_Change()
-    Dim sh As Worksheet
-    Dim species As String
-    Set sh = getSheetFromCombo(cmbJump)
-    If sh Is Nothing Then Exit Sub
-    '   複数セル選択かテーブルデータ外なら単に移動
-    If ActiveCell.CountLarge <> 1 Or _
-        Application.Intersect(ActiveCell, ListObjects(1).DataBodyRange) Is Nothing Then
-        Call jumpTo(sh)
-    ElseIf sh Is shSpecies Or sh Is shSpeciesAnalysis1 Then
-        Call jumpToSpeciesSheet(sh)
-    ElseIf sh Is shNormalAttack Or sh Is shSpecialAttack Then
-        If selectSpeciesForAtkTable() Then Call jumpTo(sh, True)
-    ElseIf Not sh Is Nothing Then   '  個体マップ
-        Call jumpToIndMap(sh, chkSameType.value)
-    End If
-    Call enableEvent(False)
-    cmbJump.value = ""
-    Call enableEvent(True)
+    Call execCombCommand(Me, cmbJump, chkSameType.value, Range(IND_R_FilterIndicator))
 End Sub
 
 '   リーグ別目標設定ボタン
@@ -75,6 +59,10 @@ End Sub
 '   セル値の変更
 Private Sub Worksheet_Change(ByVal Target As Range)
     Dim tcol As String
+    If Not Application.Intersect(Target, Range(IND_R_FilterIndicator)) Is Nothing Then
+        Call setFilter(Target)
+        Exit Sub
+    End If
     If Application.Intersect(Target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
     '   全角スペースのみはクリア
     If Target.text = "　" Then Target.ClearContents: Exit Sub
@@ -84,7 +72,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         Call TypeChange(Target)
     '   種族名
     ElseIf tcol = IND_Species Then
-        Call speciesChange(Target)
+            Call speciesChange(Target)
     '   PL
     ElseIf tcol = IND_CP Or tcol = IND_HP Or tcol = IND_fixPL Or tcol = IND_TargetPL Then
         shIndividual.Calculate
@@ -105,6 +93,49 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         Call setAtkParams(Target)
         Call enableEvent(True)
     End If
+End Sub
+
+'   特殊なフィルタの設定
+Private Sub setFilter(ByVal Target As Range)
+    Dim tcol, fcol As String
+    Dim col  As Long
+    Dim crit As Variant
+    Dim ope As XlAutoFilterOperator
+    ope = xlOr
+    Me.Calculate
+    With ListObjects(1)
+        tcol = .HeaderRowRange.cells(1, Target.column).text
+        '   タイプでフィルタ
+        If tcol = IND_Type1 Then
+            fcol = IND_FilterType
+            crit = 1
+        '   系統でフィルタ
+        ElseIf tcol = IND_Species Then
+            fcol = IND_Species
+            If speciesExpectation(Target) Then
+                crit = getEvolutionalyLine(Target.text, "111", "array")
+                ope = xlFilterValues
+            End If
+        '   通常わざ
+        ElseIf tcol = IND_NormalAtk Then
+            fcol = IND_FilterNormalAtk
+            crit = Target.value
+        '   ゲージわざ
+        ElseIf tcol = IND_SpecialAtk1 Then
+            fcol = IND_FilterSpecialAtk
+            crit = "=*" & Target.value & "*"
+        Else
+            Exit Sub
+        End If
+        If fcol <> "" Then
+            col = .ListColumns(fcol).DataBodyRange.column
+            If Target.text = "" Then
+                .Range.AutoFilter Field:=col
+            Else
+                .Range.AutoFilter Field:=col, Criteria1:=crit, Operator:=ope
+            End If
+        End If
+    End With
 End Sub
 
 '   タイプ2選択。入力規則を設定する
@@ -136,41 +167,32 @@ End Sub
 
 '   種族名の変更。
 Private Sub speciesChange(ByVal Target As Range)
-    Dim setTypes As Boolean
-    setTypes = True
-    ' 種族名が消されたら、タイプもクリア
-    If Target.text = "" Then
-        Call enableEvent(False)
-        getColumn(IND_Type1, Target).value = ""
-        getColumn(IND_Type2, Target).value = ""
-        Call enableEvent(True)
-    End If
+    Dim setSpecies As Boolean
+    Dim species As String
+    Dim types As Variant
+    setSpecies = True
     ' タイプの入力がなかったら予測候補の設定
     If getColumn(IND_Type1, Target).text = "" _
             And getColumn(IND_Type2, Target).text = "" Then
-        setTypes = speciesExpectation(Target)
+        setSpecies = speciesExpectation(Target)
     End If
-    '   タイプを確定させる
-    If setTypes Then
-        Call setTypeFromSpecies(Target)
-        getColumn(IND_Number, Target).value = getSpcAttr(Target.text, SPEC_Number)
+    '   タイプの入力ありか、予測によって種族が確定していたら、タイプの取得
+    If setSpecies Then
+        species = getColumn(IND_Species, Target).text
+        If setSpecies And species <> "" Then
+            types = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2, SPEC_Number))
+        End If
     End If
-End Sub
-
-'   種族名よりタイプの決定
-Private Sub setTypeFromSpecies(ByVal Target As Range)
-    Dim species As String
-    Dim types As Variant
-    Dim ee As Boolean
-    species = getColumn(IND_Species, Target).text
-    
-    If species = "" Then Exit Sub
-    types = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2))
-    If Not IsArray(types) Then Exit Sub
-'    Call enableEvent(False)
-    getColumn(IND_Type1, Target).value = types(0)
-    getColumn(IND_Type2, Target).value = types(1)
-'    Call enableEvent(True)
+    '   タイプが取得されていたら、タイプと番号を書き込み
+    If IsArray(types) Then
+        getColumn(IND_Type1, Target).value = types(0)
+        getColumn(IND_Type2, Target).value = types(1)
+        getColumn(IND_Number, Target).value = types(2)
+    Else
+        Union(getColumn(IND_Type1, Target), _
+                getColumn(IND_Type2, Target), _
+                getColumn(IND_Number, Target)).ClearContents
+    End If
 End Sub
 
 '   わざの数値のセット
@@ -519,6 +541,11 @@ Public Function getPotentialTCP(ByRef mon As Monster, ByRef enemy As Monster, _
     getPotentialTCP = TCP
 End Function
 
+'   標準の並べ替え
+Public Sub sortNormally()
+    Call sortTable(shIndividual, Array(IND_Number, IND_Species, IND_Nickname))
+End Sub
+
 '   個体テーブルの調整。色を付ける
 Sub alignIndividualTable()
     Call doMacro(msgstr(msgSetColorToTypesAndAttcksOnTheSheet, name))
@@ -620,6 +647,12 @@ Sub ClearData()
     Next
     '   わざの数値の表示関数。クリアする。
     Call setAtkParams(ListObjects(1).DataBodyRange.cells(1, 1), F_FORCEALL)
+End Sub
+
+'   コントロールのクリア
+Public Sub clearControls()
+    chkSameType.value = False
+    Range(IND_R_FilterIndicator).ClearContents
 End Sub
 
 '   PLの確認

@@ -58,12 +58,15 @@ Public Const cmdClear As String = "クリア"
 Public Const cmdRemove As String = "削除"
 Public Const cmdCalculate As String = "計算"
 Public Const cmdSetWeather As String = "天候設定"
+Public Const cmdFilterReset As String = "フィルター解除"
+Public Const cmdSortReset As String = "並べ替え初期化"
 
 Public Const TBL_NormalAtk As String = "通常わざ表"
 Public Const TBL_SpecialAtk As String = "ゲージわざ表"
 
 '   個体
-'Public Const SH_Individual As String = "個体"
+Public Const IND_R_FilterIndicator = "個体フィルタ指定"
+
 Public Const IND_Nickname As String = C_Nickname
 Public Const IND_Type1 As String = "タイプ1"
 Public Const IND_Type2 As String = "タイプ2"
@@ -173,6 +176,11 @@ Public Const IND_prMtcCDpsSpecialAtkName As String = "ゲージわざ_cDPS_prm"
 Public Const IND_prMtcCDPS As String = "cDPT_prm"
 Public Const IND_DeltaMtcCDPS As String = "Δ_cDPT_prm"
 Public Const IND_prMtcCycle As String = "Cyc_prm"
+
+Public Const IND_FilterType As String = "_flType"
+Public Const IND_FilterNormalAtk As String = "_flNatk"
+Public Const IND_FilterSpecialAtk As String = "_flSatk"
+
 
 '   個体マップ
 Public Const IMAP_R_Table As String = "個体マップ元表"

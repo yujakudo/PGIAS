@@ -13,29 +13,18 @@ Attribute VB_Exposed = True
 '   コンボボックスの設定
 Private Sub Worksheet_Activate()
     Call setComboMenu(cmbJump, Array( _
-            shSpeciesAnalysis1, shNormalAttack, shSpecialAttack, shSpeciesMap))
+            shSpeciesAnalysis1, shNormalAttack, shSpecialAttack, shSpeciesMap), _
+            Nothing, Array(cmdFilterReset, cmdSortReset))
 End Sub
 
 '   移動コンボボックスの変更
 Private Sub cmbJump_Change()
-    Dim sh As Worksheet
-    Dim species As String
-    Set sh = getSheetFromCombo(cmbJump)
-    If sh Is Nothing Then Exit Sub
-    '   複数セル選択かテーブルデータ外なら単に移動
-    If ActiveCell.CountLarge <> 1 Or _
-        Application.Intersect(ActiveCell, ListObjects(1).DataBodyRange) Is Nothing Then
-        Call jumpTo(sh)
-    ElseIf sh Is shSpeciesAnalysis1 Then
-        Call jumpToSpeciesSheet(sh, False)
-    ElseIf sh Is shNormalAttack Or sh Is shSpecialAttack Then
-        Call jumpToAttackSheet(sh)
-    ElseIf sh Is shSpeciesMap Then
-        Call jumpToSpecMap(sh, chkSameType.value)
-    End If
-    Call enableEvent(False)
-    cmbJump.value = ""
-    Call enableEvent(True)
+    Call execCombCommand(Me, cmbJump, chkSameType.value)
+End Sub
+
+'   コントロールのクリア
+Public Sub clearControls()
+    chkSameType.value = False
 End Sub
 
 '   種族テーブルの調整

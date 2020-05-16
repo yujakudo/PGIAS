@@ -617,7 +617,7 @@ Public Function getSheetsByName(ByVal name As String)
     getSheetsByName = sheets
 End Function
 
-Private Function checkNameInSheet(ByVal sh As Worksheet, _
+Public Function checkNameInSheet(ByVal sh As Worksheet, _
                         ByVal name As String) As Boolean
     Dim rng As Range
     On Error GoTo Err
@@ -653,15 +653,12 @@ End Function
 Public Sub onSheetChange(ByVal sh As Object)
     Dim npos As Integer
     npos = nextHistoryPos(shHistoryPos(2))
-'    Debug.Print msgstr("Try to log {0} on ({1})", Array(sh.name, npos))
     '   現在位置が途中で、かつシートが同じ
     If shHistoryPos(2) <> shHistoryPos(0) And shHistory(npos) Is sh Then
         shHistoryPos(2) = npos
-        Debug.Print msgstr("pos: {0},{1},{2}", shHistoryPos)
         Exit Sub
     End If
     Set shHistory(npos) = sh
-'    Debug.Print msgstr("set {0} to ({1})", Array(shHistory(npos).name, npos))
     shHistoryPos(0) = npos
     shHistoryPos(2) = npos
     If shHistory(shHistoryPos(1)) Is Nothing Then
@@ -669,7 +666,6 @@ Public Sub onSheetChange(ByVal sh As Object)
     ElseIf npos = shHistoryPos(1) Then
         shHistoryPos(1) = nextHistoryPos(npos)
     End If
-'    Debug.Print msgstr("pos: {0},{1},{2}", shHistoryPos)
 End Sub
 
 '   シートをまたいで移動
@@ -720,8 +716,6 @@ Private Sub moveHistory(ByVal dir As Integer)
             Or (dir < 0 And shHistoryPos(2) = shHistoryPos(1)) Then Exit Sub
     shHistoryPos(2) = nextHistoryPos(shHistoryPos(2), dir)
     Set sh = shHistory(shHistoryPos(2))
-'    Debug.Print msgstr("move to  {0}({1})", Array(sh.name, shHistoryPos(2)))
-'    Debug.Print msgstr("pos: {0},{1},{2}", shHistoryPos)
     If sh Is Nothing Then Set sh = trancateHistory(dir)
     If sh Is Nothing Then Exit Sub
     state = Application.EnableEvents
@@ -786,3 +780,17 @@ Public Function joinStrList(ByVal sl As Variant, _
     Next
 End Function
 
+'   フィルター解除
+Public Sub resetTableFilter(ByVal table As Variant)
+    Dim LC As ListColumn
+    With getListObject(table)
+        .Sort.SortFields.Clear
+        On Error GoTo EachColumn
+        .Parent.ShowAllData
+        Exit Sub
+EachColumn:
+        For Each LC In .ListColumns
+            .Range.AutoFilter LC.DataBodyRange.column
+        Next
+    End With
+End Sub

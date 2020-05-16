@@ -280,8 +280,11 @@ Public Sub allClear(Optional ByVal comfirm As Boolean = True)
     '   各シートの初期化関数
     Call doMacro(msgstr(msgProcessing, Array(msgAllSheet, msgClear)))
     Call SortBasicTables                '   種族・技のソートとリセット
+    Call shSpecies.clearControls        '   種族シートの操作リセット
+    Call shSpeciesAnalysis1.clearControls     '   種族分析シートの操作リセット
     Call shSpeciesMap.ResetSpeciesMap   '   種族マップのリセット
     Call shIndividual.ClearData         '   個体シートのクリア
+    Call shIndividual.clearControls     '   個体シートの操作リセット
     Call shIndivMap.initSheet           '   個体マップの初期化
     Call shCounter.initSheet         '   対策シートの初期化
     Call shCounting.clearAll          '   集計のクリア

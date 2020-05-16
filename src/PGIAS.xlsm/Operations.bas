@@ -33,10 +33,20 @@ End Sub
 
 '   種族名の予測変換候補の入力規則設定
 Public Function speciesExpectation(ByVal Target As Range) As Boolean
-    Dim txt As String
+    Dim txt, part(1) As String
+    Dim pos As Integer
     Dim rng As Range
     If IsNull(Target.text) Then Exit Function
-    txt = StrConv(Target.text, vbKatakana)
+    txt = Target.text
+    txt = Replace(txt, "（", "(")
+    pos = InStr(txt, "(")
+    If pos > 0 Then
+        part(0) = left(txt, pos)
+        part(1) = Replace(Mid(txt, pos + 1), "）", ")")
+        txt = StrConv(part(0), vbKatakana) & part(1)
+    Else
+        txt = StrConv(txt, vbKatakana)
+    End If
     Set rng = shSpecies.ListObjects(1).ListColumns(SPEC_Name).Range
     speciesExpectation = rangeExpectation(Target, rng, txt)
 End Function
@@ -91,6 +101,7 @@ Private Function rangeExpectation(ByVal Target As Range, _
     Call enableEvent(False)
     Target.value = cand(0)
     '   複数候補があるならリストに設定
+    
     If cnum > 1 Then
         ReDim Preserve cand(cnum - 1)
         Call setInputList(Target, Join(cand, ","))
@@ -472,7 +483,8 @@ End Sub
 '   コンボボックスのシート選択メニュー作成
 Public Sub setComboMenu(ByRef cmb As ComboBox, _
                     Optional ByRef shs As Variant = Nothing, _
-                    Optional ByRef names As Variant = Nothing)
+                    Optional ByRef names As Variant = Nothing, _
+                    Optional ByRef commands As Variant = Nothing)
     Dim sh, nm, sheets As Variant
     With cmb
         .Clear
@@ -487,6 +499,11 @@ Public Sub setComboMenu(ByRef cmb As ComboBox, _
                 For Each sh In sheets
                     .AddItem sh.name
                 Next
+            Next
+        End If
+        If IsArray(commands) Then
+            For Each nm In commands
+                .AddItem nm
             Next
         End If
     End With
@@ -569,3 +586,52 @@ Public Sub jumpToSpecMap(ByVal sh As Worksheet, ByVal sameType As Boolean)
     Call jumpTo(sh)
 End Sub
 
+'   コンボボックスのコマンドの実行
+Public Sub execCombCommand(ByRef sh As Worksheet, ByRef cmb As ComboBox, _
+                            ByVal sameType As Boolean, _
+                        Optional ByVal flterInd As Range = Nothing)
+    Dim shTo As Worksheet
+    Dim species As String
+    If cmb.value = cmdFilterReset Then
+        Call resetTableFilter(sh)
+        If Not flterInd Is Nothing Then
+            flterInd.ClearContents
+        End If
+    ElseIf cmb.value = cmdSortReset Then
+        Call CallByName(sh, "sortNormally", VbMethod)
+    Else
+        Set shTo = getSheetFromCombo(cmb)
+        If Not shTo Is Nothing Then Call jumpConsideringSpecies(shTo, sameType)
+    End If
+    Call enableEvent(False)
+    cmb.value = ""
+    Call enableEvent(True)
+End Sub
+
+'   他のシートに移動
+Private Sub jumpConsideringSpecies(ByVal sh As Object, ByVal sameType As Boolean)
+    Dim sw As Boolean
+    '   複数セル選択かテーブルデータ外なら単に移動
+    If ActiveCell.CountLarge <> 1 Or _
+        Application.Intersect(ActiveCell, ActiveSheet.ListObjects(1).DataBodyRange) Is Nothing Then
+        Call jumpTo(sh)
+    '   種族か種族分析
+    ElseIf sh Is shSpecies Or sh Is shSpeciesAnalysis1 Then
+        If ActiveSheet Is shSpecies Or ActiveSheet Is shSpeciesAnalysis1 Then
+            Call jumpToSpeciesSheet(sh, False)
+        Else
+            Call jumpToSpeciesSheet(sh, True)
+        End If
+    '   わざ
+    ElseIf sh Is shNormalAttack Or sh Is shSpecialAttack Then
+        If selectSpeciesForAtkTable() Then Call jumpTo(sh, True)
+    '  種族マップ
+    ElseIf sh Is shSpeciesMap Then
+        Call jumpToSpecMap(sh, sameType)
+    '  個体マップ
+    ElseIf checkNameInSheet(sh, IMAP_R_Settings) Then
+        Call jumpToIndMap(sh, sameType)
+    Else
+        Call jumpTo(sh)
+    End If
+End Sub
