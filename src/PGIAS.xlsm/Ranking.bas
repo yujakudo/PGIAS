@@ -156,7 +156,7 @@ Private Sub SetRanking(ByVal rng As Range)
 End Sub
 
 '   ランク一つを計算
-Private Sub SetARanking(ByVal Target As Range, _
+Private Sub SetARanking(ByVal target As Range, _
             ByRef settings As Object, ByRef dmySet As DummySet)
     Dim stime As Double
     Dim ssbj, memo As String
@@ -164,16 +164,16 @@ Private Sub SetARanking(ByVal Target As Range, _
     Dim wthNum As Integer
     
     stime = Timer
-    ssbj = Target.text
-    memo = getColumn(CR_Memo, Target).text
+    ssbj = target.text
+    memo = getColumn(CR_Memo, target).text
     If memo <> "" Then ssbj = ssbj & "(" & memo & ")"
     If settings(CR_SetMode) = C_Gym Then wthNum = weathersNum() + 1 Else wthNum = 1
     Call dspProgress(msgstr(msgCalcRank, Array(ssbj)), _
             2 * wthNum * shIndividual.ListObjects(1).DataBodyRange.rows.count)
-    Call fillRank(Target, settings, dmySet)
+    Call fillRank(target, settings, dmySet)
     
     Call dspProgress("", 0)
-    Set cel = getColumn(CR_Time, Target)
+    Set cel = getColumn(CR_Time, target)
     cel.value = Timer - stime
     cel.NumberFormatLocal = "0.0_ "
     cel.Offset(1, 0).value = Now
@@ -539,34 +539,34 @@ End Sub
 '   セルの選択・変更
 
 '   セルの選択
-Public Function onRankingSelectionChange(ByVal Target As Range) As Boolean
+Public Function onRankingSelectionChange(ByVal target As Range) As Boolean
     Dim ridx As Variant
     onRankingSelectionChange = False
-    If Target.CountLarge <> 1 Then Exit Function
-    If Not Application.Intersect(Target, Target.Parent.Range(CR_R_ListSelect)) Is Nothing Then
-        Call setListList(Target)
+    If target.CountLarge <> 1 Then Exit Function
+    If Not Application.Intersect(target, target.Parent.Range(CR_R_ListSelect)) Is Nothing Then
+        Call setListList(target)
         onRankingSelectionChange = True
         Exit Function
     End If
-    With Target.Parent.ListObjects(1)
-        If Application.Intersect(Target, .DataBodyRange) Is Nothing Then Exit Function
+    With target.Parent.ListObjects(1)
+        If Application.Intersect(target, .DataBodyRange) Is Nothing Then Exit Function
         Call setInputList
-        ridx = getRowIndex(Target, True)
-        Select Case .HeaderRowRange.cells(1, Target.column).text
+        ridx = getRowIndex(target, True)
+        Select Case .HeaderRowRange.cells(1, target.column).text
             Case CR_Weather
-                If ridx(0) = 0 Then Call weatherSelected(Target)
+                If ridx(0) = 0 Then Call weatherSelected(target)
             Case CR_Memo
-                If ridx(0) = 0 And ridx(1) <> "?" Then Target.Font.ColorIndex = 0
+                If ridx(0) = 0 And ridx(1) <> "?" Then target.Font.ColorIndex = 0
             Case CR_Attacks
-                If ridx(0) >= 0 Then Call AtkSelected(Target, ridx(0), ridx(1))
+                If ridx(0) >= 0 Then Call AtkSelected(target, ridx(0), ridx(1))
         End Select
     End With
     onRankingSelectionChange = True
 End Function
 
 '   リストのプルダウンリストの設定
-Private Function setListList(ByVal Target As Range)
-    With Target.Validation
+Private Function setListList(ByVal target As Range)
+    With target.Validation
         .Delete
         .Add xlValidateList, Formula1:=Join(shList.getListNames(), ",")
     End With
@@ -574,11 +574,11 @@ End Function
 
 '   列インデクスの取得。
 '   0:一行目(種族名と同行)、1:2行目、-1:その他
-Private Function getRowIndex(ByVal Target As Range, _
+Private Function getRowIndex(ByVal target As Range, _
                     Optional ByVal needSpecies As Boolean = False) As Variant
     Dim spCel As Range
     Dim species As String
-    Set spCel = getColumn(CR_Species, Target)
+    Set spCel = getColumn(CR_Species, target)
     getRowIndex = -1
     species = spCel.text
     If species <> "" Then
@@ -594,7 +594,7 @@ Private Function getRowIndex(ByVal Target As Range, _
 End Function
 
 '   セル値の変更
-Public Function onRankingSheetChange(ByVal Target As Range, _
+Public Function onRankingSheetChange(ByVal target As Range, _
                         Optional ByVal nullAtk As Boolean = False) As Boolean
     Dim title As String
     Dim ridx As Variant
@@ -602,15 +602,15 @@ Public Function onRankingSheetChange(ByVal Target As Range, _
     Dim cel As Range
     
     onRankingSheetChange = False
-    Set rSettings = Target.Parent.Range(CR_R_Settngs)
-    If Target.row = 1 Then
+    Set rSettings = target.Parent.Range(CR_R_Settngs)
+    If target.row = 1 Then
         '   左上の天候設定
-        If Not Application.Intersect(Target, Target.Parent.Range(CR_R_WeatherGuess)) Is Nothing Then
-            Call setWeatherToCell(Target)
-            With Target.Parent
+        If Not Application.Intersect(target, target.Parent.Range(CR_R_WeatherGuess)) Is Nothing Then
+            Call setWeatherToCell(target)
+            With target.Parent
                 onRankingSheetChange = True
                 Call enableEvent(False)
-                If Target.text <> "" Then
+                If target.text <> "" Then
                     .chkAll.value = True
                     .cmbCommand.value = cmdSetWeather
                 Else
@@ -622,66 +622,66 @@ Public Function onRankingSheetChange(ByVal Target As Range, _
         End If
         Exit Function
     End If
-    With Target.Parent.ListObjects(1)
-        If Target.row <= .HeaderRowRange.row Then
+    With target.Parent.ListObjects(1)
+        If target.row <= .HeaderRowRange.row Then
             '   設定のモードが変更された場合
-            If Not Application.Intersect(Target, rSettings) Is Nothing Then
-                onRankingSheetChange = settingsChange(Target, rSettings)
+            If Not Application.Intersect(target, rSettings) Is Nothing Then
+                onRankingSheetChange = settingsChange(target, rSettings)
             End If
             Exit Function
         End If
         '   テーブルのデータ領域でないなら終了
-        If Target.CountLarge <> 1 Or _
-            Application.Intersect(Target, .DataBodyRange) Is Nothing Then Exit Function
+        If target.CountLarge <> 1 Or _
+            Application.Intersect(target, .DataBodyRange) Is Nothing Then Exit Function
         '   変更セルの列タイトル
-        title = .HeaderRowRange.cells(1, Target.column).text
+        title = .HeaderRowRange.cells(1, target.column).text
         '   全角スペースのみはクリアして終了
-        If title <> CR_Weather And (Target.text = "" Or Target.text = "　") Then
+        If title <> CR_Weather And (target.text = "" Or target.text = "　") Then
             Call enableEvent(False)
-            Target.ClearContents
-            Target.Validation.Delete
+            target.ClearContents
+            target.Validation.Delete
             Call enableEvent(True)
             Exit Function
         End If
     End With
     '   列インデックスと種族名
-    ridx = getRowIndex(Target, True)
+    ridx = getRowIndex(target, True)
     If ridx(0) = 0 And title = CR_Weather Then
-        Call weatherChange(Target)
+        Call weatherChange(target)
     ElseIf ridx(0) = 0 And title = CR_Species Then
-        Call speciesChange(Target, rSettings, nullAtk)
+        Call speciesChange(target, rSettings, nullAtk)
     ElseIf ridx(0) = 0 And title = CR_Memo Then
-        Call memoChange(Target)
+        Call memoChange(target)
     ElseIf ridx(0) = 1 And title = CR_CPHP Then
         '   CP/HPの2行目はHPの値チェック
-        Call checkHPValue(Target)
-        Call calcParams(Target)
+        Call checkHPValue(target)
+        Call calcParams(target)
     ElseIf title = CR_PL Or title = CR_ATK _
             Or title = CR_DEF Or title = CR_HP Or title = CR_CPHP Then
-        Call calcParams(Target)
+        Call calcParams(target)
     ElseIf title = CR_Attacks Then
-        Call AtkChange(Target, True, ridx(0), ridx(1))
+        Call AtkChange(target, True, ridx(0), ridx(1))
     End If
     onRankingSheetChange = True
 End Function
 
 '   設定が変更された
-Private Function settingsChange(ByVal Target As Range, _
+Private Function settingsChange(ByVal target As Range, _
                     ByVal rngSettings As Range) As Boolean
     Dim key As String
     Dim idx As Long
     
     settingsChange = False
-    key = Target.Offset(-1, 0).text
+    key = target.Offset(-1, 0).text
     If key = CR_SetMode Then
         Call doMacro(msgChaingingSettings)
-        Call changeRankingMode(Target)
+        Call changeRankingMode(target)
         Call doMacro
         settingsChange = True
     ElseIf key = C_AutoTarget Then
-        If Target.text <> C_None And Target.text <> "" Then
+        If target.text <> C_None And target.text <> "" Then
             Call doMacro(msgChaingingSettings)
-            Call setSettings(rngSettings, getAutoTargetSettings(Target.text))
+            Call setSettings(rngSettings, getAutoTargetSettings(target.text))
             idx = WorksheetFunction.Match(CR_SetMode, rngSettings.rows(1), 0)
             Call changeRankingMode(rngSettings.cells(2, idx))
             Call doMacro
@@ -691,7 +691,7 @@ Private Function settingsChange(ByVal Target As Range, _
 End Function
 
 '   天候セルの選択。入力規則の設定
-Private Sub weatherSelected(ByVal Target As Range)
+Private Sub weatherSelected(ByVal target As Range)
     Dim lst As String
     Dim ri As Long
     lst = "　"
@@ -700,25 +700,25 @@ Private Sub weatherSelected(ByVal Target As Range)
             lst = lst & "," & .cells(ri, 1)
         Next
     End With
-    Call setInputList(Target, lst)
+    Call setInputList(target, lst)
 End Sub
 
 '   天候セルの変更。色を付けて領域をコピー
-Private Sub weatherChange(ByVal Target As Range)
+Private Sub weatherChange(ByVal target As Range)
     Dim wth As Integer
     Dim rrows As Variant
-    Call setWeatherToCell(Target)
-    rrows = getExecRows(Target)
+    Call setWeatherToCell(target)
+    rrows = getExecRows(target)
     Call doMacro(msgCopyingRegion)
-    Call copyRegion(Target, rrows(0))
+    Call copyRegion(target, rrows(0))
     Call doMacro
 End Sub
 
 '   HPのセルでレベルをHPに変換
-Public Sub checkHPValue(ByVal Target As Range)
+Public Sub checkHPValue(ByVal target As Range)
     Dim txt, h As String
     Dim lvl As Integer
-    txt = Target.text
+    txt = target.text
     If IsNumeric(txt) Then Exit Sub
     txt = StrConv(txt, vbNarrow)
     txt = StrConv(txt, vbLowerCase)
@@ -727,13 +727,13 @@ Public Sub checkHPValue(ByVal Target As Range)
         lvl = val(Mid(txt, 2))
         If lvl < 1 And 5 < lvl Then Exit Sub
         Call enableEvent(False)
-        Target.value = Array(0, 600, 1800, 3600, 9000, 15000)(lvl)
+        target.value = Array(0, 600, 1800, 3600, 9000, 15000)(lvl)
         Call enableEvent(True)
     End If
 End Sub
 
 '   種族名の変更
-Private Sub speciesChange(ByVal Target As Range, _
+Private Sub speciesChange(ByVal target As Range, _
                     ByVal settingRng As Range, _
             Optional ByVal nullAtk As Boolean = False)
     Dim species, natk, satk As String
@@ -743,57 +743,57 @@ Private Sub speciesChange(ByVal Target As Range, _
     Dim dmySet As DummySet
     Dim flag As Integer
     
-    If Target.Offset(1, 0) <> "" Then
-        Call insertRows(Target, 2)
+    If target.Offset(1, 0) <> "" Then
+        Call insertRows(target, 2)
     Else    '   テーブル拡張
-        Target.Offset(1, 1).value = " "
+        target.Offset(1, 1).value = " "
     End If
-    exists = speciesExpectation(Target)
-    species = getColumn(CR_Species, Target).text
+    exists = speciesExpectation(target)
+    species = getColumn(CR_Species, target).text
     Set settings = getSettings(settingRng)
     Call enableEvent(False)
     '   種族名が存在しないとき
     If Not exists Then
         '   ダミーの設定
         If species = "?" Or species = "？" Then
-            dmySet = getDummySettings(Target.Parent)
-            Call setDummyParam(Target, settings, dmySet.Power, True)
+            dmySet = getDummySettings(target.Parent)
+            Call setDummyParam(target, settings, dmySet.Power, True)
         Else    '   無効なのでクリア
-            Call clearEnemySettings(Target, True)
+            Call clearEnemySettings(target, True)
         End If
     Else
         '   有効な種族名のとき
         flag = FDP_AUTO
         If nullAtk Then flag = flag Or FDP_UNSET_ATK
-        Call setDefParams(Target, settings, flag, species)
+        Call setDefParams(target, settings, flag, species)
     End If
     '   日時と天候のクリア
-    With getColumn(CR_Time, Target)
+    With getColumn(CR_Time, target)
         .ClearContents
         .Offset(1, 0).ClearContents
     End With
-    getColumn(CR_Weather, Target).ClearContents
+    getColumn(CR_Weather, target).ClearContents
     Call enableEvent(True)
 End Sub
 
 '   備考の変更
-Private Sub memoChange(ByVal Target As Range)
+Private Sub memoChange(ByVal target As Range)
     Dim species As String
     Dim str As String
-    species = getColumn(CR_Species, Target).text
+    species = getColumn(CR_Species, target).text
     If species = "?" Or species = "？" Then
-        str = Replace(Target.text, "、", ",")
+        str = Replace(target.text, "、", ",")
         str = Replace(str, "，", ",")
         Call enableEvent(False)
-        Target.value = Replace(str, "・", ",")
-        Call setTypeColorsOnCell(Target, , True)
+        target.value = Replace(str, "・", ",")
+        Call setTypeColorsOnCell(target, , True)
         Call enableEvent(True)
     End If
 End Sub
 
 '   相手の設定の取得
 '   戻り値は、0:Monster, 1:CP上下限の配列、2:メモ
-Private Function getEnemySettings(ByVal Target As Range, _
+Private Function getEnemySettings(ByVal target As Range, _
                 ByRef settings As Object, _
                 ByRef dmySet As DummySet, _
                 ByRef CPlimit As Variant) As Monster
@@ -802,7 +802,7 @@ Private Function getEnemySettings(ByVal Target As Range, _
     Dim limit, memo, atks(1) As Variant
     Dim atkStr As String
     '   "getEnemySettings"は、Monster型の変数として用いている
-    Set tcel = getEnemyMon(Target, getEnemySettings)
+    Set tcel = getEnemyMon(target, getEnemySettings)
     If tcel Is Nothing Then Exit Function
     If settings(CR_SetMode) = C_Gym Then mode = C_IdGym Else mode = C_IdMtc
     '   技をクラス毎取得
@@ -837,7 +837,7 @@ End Function
 '   敵本体の取得
 '   cat（設定カテゴリ）未指定時はPL2行目の値を用いる
 '   戻り値は一行目技のセル
-Public Function getEnemyMon(ByVal Target As Range, _
+Public Function getEnemyMon(ByVal target As Range, _
                 ByRef mon As Monster, _
                 Optional ByVal cat As Integer = -1) As Range
     Dim ridx, types As Variant
@@ -845,11 +845,11 @@ Public Function getEnemyMon(ByVal Target As Range, _
     Dim tcel As Range
     Dim species As String
     
-    ridx = getRowIndex(Target, True)
+    ridx = getRowIndex(target, True)
     If ridx(0) < 0 Then Exit Function
     If ridx(1) = "?" Then species = "" Else species = ridx(1)
-    acol = getColumnIndex(CR_Attacks, Target)
-    Set tcel = Target.Parent.cells(Target.row - ridx(0), acol)
+    acol = getColumnIndex(CR_Attacks, target)
+    Set tcel = target.Parent.cells(target.row - ridx(0), acol)
     If cat < 0 Then cat = getEnemySettingValue(tcel, 1, CR_PL)
     If cat = 0 Then '   PL, 個体値
         Call getMonster(mon, species, _
@@ -891,7 +891,7 @@ End Sub
 
 '   相手の設定の書き込み
 '   イベントONOFFは呼び出し側で行う
-Private Function setEnemySettings(ByVal Target As Range, ByVal cat As Integer, _
+Private Function setEnemySettings(ByVal target As Range, ByVal cat As Integer, _
                 ByRef mon As Monster, _
                 Optional ByRef limit As Variant = False, _
                 Optional ByRef attacks As Variant = False) As Range
@@ -899,10 +899,10 @@ Private Function setEnemySettings(ByVal Target As Range, ByVal cat As Integer, _
     Dim acol As Long
     Dim tcel As Range
     
-    ridx = getRowIndex(Target, True)
+    ridx = getRowIndex(target, True)
     If ridx(0) < 0 Then Exit Function
-    acol = getColumnIndex(CR_Attacks, Target)
-    Set tcel = Target.Parent.cells(Target.row - ridx(0), acol)
+    acol = getColumnIndex(CR_Attacks, target)
+    Set tcel = target.Parent.cells(target.row - ridx(0), acol)
     Call setEnemySettingValue(tcel, 0, CR_PL, mon.PL)
     Call setEnemySettingValue(tcel, 1, CR_PL, cat)
     Call setEnemySettingValue(tcel, 0, CR_ATK, mon.indATK)
@@ -927,25 +927,25 @@ End Function
 
 '   敵の設定のクリア
 '   イベントONOFFは呼び出し側で行う
-Private Sub clearEnemySettings(ByVal Target As Range, Optional ByVal withCpLim As Boolean = False)
+Private Sub clearEnemySettings(ByVal target As Range, Optional ByVal withCpLim As Boolean = False)
     Dim ridx As Integer
     Dim rcol As Variant
     Dim lcol As String
     Dim row As Long
     
-    ridx = getRowIndex(Target)
+    ridx = getRowIndex(target)
     If ridx < 0 Then Exit Sub
     If withCpLim Then lcol = CR_CPLimit Else lcol = CR_CPHP
-    rcol = getColumnIndexes(Target, Array(CR_Attacks, lcol))
-    row = Target.row - ridx
-    With Target.Parent
+    rcol = getColumnIndexes(target, Array(CR_Attacks, lcol))
+    row = target.row - ridx
+    With target.Parent
         Range(.cells(row, rcol(0)), .cells(row + 1, rcol(1))).ClearContents
     End With
 End Sub
 
 '   デフォルトのパラメータをセット
 '   イベント抑制は呼び出し側で
-Private Sub setDefParams(ByVal Target As Range, _
+Private Sub setDefParams(ByVal target As Range, _
             ByRef settings As Object, _
             Optional ByVal flag As Integer = 0, _
             Optional ByVal species As String = "", _
@@ -973,7 +973,7 @@ Private Sub setDefParams(ByVal Target As Range, _
         End If
         atks = seachAndGetValues(species, SA1_Name, shSpeciesAnalysis1, atks)
     End If
-    Set tcel = setEnemySettings(Target, cat, mon, _
+    Set tcel = setEnemySettings(target, cat, mon, _
             Array(settings(CR_DefCpUpper), settings(CR_DefCpLower)), _
             atks)
     types = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2))
@@ -1007,12 +1007,7 @@ Private Function setIVasAutoTarget(ByRef settings As Object, _
         setIVasAutoTarget = 3
         Exit Function
     End If
-    pos = InStr(rivs, ",")
-    If pos < 1 Then Exit Function
-    rivs = Trim(left(rivs, pos - 1))
-    atk = val("&H" + Mid(rivs, 1, 1))
-    def = val("&H" + Mid(rivs, 2, 1))
-    hp = val("&H" + Mid(rivs, 3, 1))
+    If Not getIndValues(rivs, atk, def, hp) Then Exit Function
 End Function
 
 
@@ -1055,13 +1050,13 @@ Private Function getMonBySettingVal(ByRef mon As Monster, _
 End Function
 
 '   変更位置カテゴリの取得
-Private Function getChangeCategory(ByVal Target As Range) As Integer
+Private Function getChangeCategory(ByVal target As Range) As Integer
     Dim ridx As Variant
-    ridx = getRowIndex(Target, True)
+    ridx = getRowIndex(target, True)
 '    If ridx(0) < 0 Or Len(ridx(1)) < 2 Then
     If ridx(0) < 0 Then
         getChangeCategory = -1
-    ElseIf Target.column = getColumnIndex(CR_CPHP, Target) Then
+    ElseIf target.column = getColumnIndex(CR_CPHP, target) Then
         getChangeCategory = 2
     ElseIf ridx(0) = 0 Then
         getChangeCategory = 0
@@ -1071,21 +1066,21 @@ Private Function getChangeCategory(ByVal Target As Range) As Integer
 End Function
 
 '   パラメータを計算して書き込む
-Private Sub calcParams(ByVal Target As Range)
+Private Sub calcParams(ByVal target As Range)
     Dim cat As Integer
     Dim mon As Monster
-        cat = getChangeCategory(Target)
+        cat = getChangeCategory(target)
     If cat >= 0 Then
-        Call getEnemyMon(Target, mon, cat)
+        Call getEnemyMon(target, mon, cat)
         Call enableEvent(False)
-        Call setEnemySettings(Target, cat, mon)
+        Call setEnemySettings(target, cat, mon)
         Call enableEvent(True)
     End If
 End Sub
 
 '   ダミーパラメータのセット
 '   イベントONOFFは呼び出し側で行う
-Private Sub setDummyParam(ByVal Target As Range, _
+Private Sub setDummyParam(ByVal target As Range, _
             ByRef settings As Object, ByRef dmyPow As Object, _
             Optional ByVal withLimit As Boolean = False)
     Dim ridx, cat As Integer
@@ -1093,20 +1088,20 @@ Private Sub setDummyParam(ByVal Target As Range, _
     Dim lim As Variant
     Dim CpUpper As Long
     
-    ridx = getRowIndex(Target)
+    ridx = getRowIndex(target)
     If ridx < 0 Then Exit Sub
     CpUpper = getCpUpper(settings(C_AutoTarget), 0)
     cat = getMonBySettingVal(mon, "", 0, _
                 dmyPow(CR_DmyAtkPower), dmyPow(CR_DmyDefPower), _
                 dmyPow(CR_DmyHP), dmyPow(CR_DmyCP), CpUpper)
     If withLimit Then lim = Array(settings(CR_DefCpUpper), settings(CR_DefCpLower))
-    Call setEnemySettings(Target, cat, mon, lim)
+    Call setEnemySettings(target, cat, mon, lim)
 End Sub
 
 '  全てダミーに設定
 Public Sub setDummyAll(ByVal sh As Worksheet)
     Dim cel As Range
-    Dim rcel As Variant
+    Dim rCel As Variant
     Dim settings As Object
     Dim dmySet As DummySet
     Dim cols As Variant
@@ -1124,13 +1119,13 @@ Public Sub setDummyAll(ByVal sh As Worksheet)
     row = 1
     Call setBorders(sh, Array(row, row + 1), True)
     '   タイプ別表のタイプの行でループ
-    For Each rcel In shClassifiedByType.ListObjects(1) _
+    For Each rCel In shClassifiedByType.ListObjects(1) _
                 .ListColumns(CBT_Type).DataBodyRange
         Set cel = cel.Offset(2, 0)
         row = row + 2
         cel.Offset(0, cols(0)).value = "?"
         Call setDummyParam(cel, settings, dmySet.Power, True)
-        cel.value = rcel.text
+        cel.value = rCel.text
         Call setTypeColorsOnCell(cel, , True)
         Call setBorders(sh, Array(row, row + 1), True)
     Next
@@ -1253,7 +1248,7 @@ End Sub
 '   リストから追加
 Public Sub addFromList(ByVal sh As Worksheet, _
             Optional ByVal nullAtk As Boolean = False)
-    Dim rcel As Range
+    Dim rCel As Range
     Dim wcel As Range
     Dim lname As String
     Dim lo As ListObject
@@ -1272,15 +1267,15 @@ Public Sub addFromList(ByVal sh As Worksheet, _
             Set wcel = .cells(.rows.count, 1).Offset(1, 0)
         End If
     End With
-    For Each rcel In lo.ListColumns(LI_Species).DataBodyRange
-        Call setListItem(settings, rcel, wcel, flag)
+    For Each rCel In lo.ListColumns(LI_Species).DataBodyRange
+        Call setListItem(settings, rCel, wcel, flag)
     Next
     Call doMacro
 End Sub
 
 '   リスト項目の追加
 Private Function setListItem(ByRef settings As Object, _
-                            ByRef rcel As Range, ByRef wcel As Range, _
+                            ByRef rCel As Range, ByRef wcel As Range, _
                     Optional ByVal flag As Integer = 0, _
                     Optional ByVal CpUpper As Long = 0) As Boolean
     Dim attr As Object
@@ -1289,7 +1284,7 @@ Private Function setListItem(ByRef settings As Object, _
     Dim spl As String
     
     setListItem = False
-    Set attr = getRowValues(rcel)
+    Set attr = getRowValues(rCel)
     If speciesExists(attr(LI_Species)) Then
         wcel.value = attr(LI_Species)
         wcel.Offset(1, 1).value = " "
@@ -1312,42 +1307,42 @@ End Function
 
 
 '   ランキングのモードが変わったので、タイトルを書き変える
-Public Sub changeRankingMode(ByVal Target As Range)
+Public Sub changeRankingMode(ByVal target As Range)
     Dim cel As Variant
     Dim words As Variant
     Dim mode, curMode As Integer
     Dim sh As Worksheet
     Dim rng As Range
     
-    If Target.text = C_Gym Then
+    If target.text = C_Gym Then
         mode = C_IdGym
-    ElseIf Target.text = C_Match Then
+    ElseIf target.text = C_Match Then
         mode = C_IdMtc
     Else
         Exit Sub
     End If
-    Set sh = Target.Parent
+    Set sh = target.Parent
     If mode = currentSimMode(sh) Then Exit Sub
     Set rng = sh.ListObjects(1).DataBodyRange
     If rng.rows.count > 2 Or rng.cells(1, 2) <> "" Then
         If MsgBox(msgAskChangeBattleMode, vbOKCancel) <> vbOK Then
-            If Target.Parent.chkShowColumns.visible Then
-                Target.value = C_Gym
+            If target.Parent.chkShowColumns.visible Then
+                target.value = C_Gym
             Else
-                Target.value = C_Match
+                target.value = C_Match
             End If
             Exit Sub
         End If
     End If
     Call ClearAllRanking(sh, True)
     words = Array("PS_", "PT_")
-    For Each cel In Target.Parent.ListObjects(1).HeaderRowRange
+    For Each cel In target.Parent.ListObjects(1).HeaderRowRange
         cel.value = Replace(cel.text, words(1 - mode), words(mode))
     Next
     sh.ListObjects(1).ListColumns(CR_Weather).DataBodyRange _
                 .EntireColumn.Hidden = Not (mode = C_IdGym)
     Call weatherRankingVisible(sh, False)
-    Target.Parent.chkShowColumns.visible = (mode = C_IdGym)
+    target.Parent.chkShowColumns.visible = (mode = C_IdGym)
     sh.Range(CR_R_WeatherGuess).ClearContents
 End Sub
 

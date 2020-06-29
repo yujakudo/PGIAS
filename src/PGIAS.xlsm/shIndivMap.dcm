@@ -51,7 +51,7 @@ Private Sub chkShowPrediction_Click()
 End Sub
 
 '   シートの変更
-Private Sub Worksheet_Change(ByVal Target As Range)
+Private Sub Worksheet_Change(ByVal target As Range)
     Dim stype As Variant
     Dim rngType, rngSelect, rngSetting As Range
     
@@ -60,7 +60,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Set rngSetting = Range(IMAP_R_Settings)
     
     '   タイプ選択・個体選択のセルの変更
-    If Not Application.Intersect(Target, Union(rngType, rngSelect)) _
+    If Not Application.Intersect(target, Union(rngType, rngSelect)) _
                                         Is Nothing Then
         Call doMacro(msgSettingMap)
         '   タイプ、個体選択を渡してマーカー設定
@@ -69,8 +69,8 @@ Private Sub Worksheet_Change(ByVal Target As Range)
                         rngSelect.text, chkShowPrediction.value)
         Call doMacro
     '   設定の変更
-    ElseIf Target.row > 1 And Not Application.Intersect(Target, rngSetting) Is Nothing Then
-        Call onChangeMapSettings(Target, rngSetting)
+    ElseIf target.row > 1 And Not Application.Intersect(target, rngSetting) Is Nothing Then
+        Call onChangeIndMapSettings(target, rngSetting)
     End If
 End Sub
 

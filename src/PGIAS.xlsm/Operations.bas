@@ -6,7 +6,7 @@ Option Explicit
 Private Declare Function GetAsyncKeyState Lib "User32.dll" (ByVal vKey As Long) As Long
 
 '   入力規則のリストをセルに設定する
-Sub setInputList(Optional ByVal Target As Range = Nothing, _
+Sub setInputList(Optional ByVal target As Range = Nothing, _
                         Optional ByVal lst As String = "", _
                         Optional ByVal showList = False)
     Static lastTarget As Range
@@ -18,26 +18,26 @@ ValidationClearSkip:
         On Error GoTo 0
         Set lastTarget = Nothing
     End If
-    If Target Is Nothing Then Exit Sub
+    If target Is Nothing Then Exit Sub
     '   規則の設定
-    With Target
+    With target
         .Validation.Delete
         If lst <> "" Then
             .Validation.Add Type:=xlValidateList, Formula1:=lst
             If .text <> "" And Not InStr(lst, .text) > 0 Then .value = ""
-            Set lastTarget = Target
+            Set lastTarget = target
             If showList Then SendKeys "%{Down}"
         End If
     End With
 End Sub
 
 '   種族名の予測変換候補の入力規則設定
-Public Function speciesExpectation(ByVal Target As Range) As Boolean
+Public Function speciesExpectation(ByVal target As Range) As Boolean
     Dim txt, part(1) As String
     Dim pos As Integer
     Dim rng As Range
-    If IsNull(Target.text) Then Exit Function
-    txt = Target.text
+    If IsNull(target.text) Then Exit Function
+    txt = target.text
     txt = Replace(txt, "（", "(")
     pos = InStr(txt, "(")
     If pos > 0 Then
@@ -48,23 +48,23 @@ Public Function speciesExpectation(ByVal Target As Range) As Boolean
         txt = StrConv(txt, vbKatakana)
     End If
     Set rng = shSpecies.ListObjects(1).ListColumns(SPEC_Name).Range
-    speciesExpectation = rangeExpectation(Target, rng, txt)
+    speciesExpectation = rangeExpectation(target, rng, txt)
 End Function
 
 '   個体の予測変換候補の入力規則設定
-Public Function individualExpectation(ByVal Target As Range) As Boolean
+Public Function individualExpectation(ByVal target As Range) As Boolean
     Dim txt As String
     Dim rng As Range
     Set rng = shIndividual.ListObjects(1).ListColumns(IND_Nickname).Range
-    individualExpectation = rangeExpectation(Target, rng)
+    individualExpectation = rangeExpectation(target, rng)
     If Not individualExpectation Then
-        txt = StrConv(Target.text, vbKatakana)
-        individualExpectation = rangeExpectation(Target, rng, txt)
+        txt = StrConv(target.text, vbKatakana)
+        individualExpectation = rangeExpectation(target, rng, txt)
     End If
 End Function
 
 '   range指定での入力規則設定
-Private Function rangeExpectation(ByVal Target As Range, _
+Private Function rangeExpectation(ByVal target As Range, _
                 ByVal rng As Range, _
         Optional ByVal txt As String = "") As Boolean
     Dim first, cell As Range
@@ -72,7 +72,7 @@ Private Function rangeExpectation(ByVal Target As Range, _
     Dim clim, cnum, i As Integer
     
     rangeExpectation = False
-    If txt = "" Then txt = Target.text
+    If txt = "" Then txt = target.text
     Set first = rng.Find(txt, LookAt:=xlPart)
     If first Is Nothing Then Exit Function
     Set cell = first
@@ -99,14 +99,14 @@ Private Function rangeExpectation(ByVal Target As Range, _
     If cnum = 0 Then Exit Function
     '   最初の候補に設定
     Call enableEvent(False)
-    Target.value = cand(0)
+    target.value = cand(0)
     '   複数候補があるならリストに設定
     
     If cnum > 1 Then
         ReDim Preserve cand(cnum - 1)
-        Call setInputList(Target, Join(cand, ","))
+        Call setInputList(target, Join(cand, ","))
         On Error GoTo Continue
-        Target.Select
+        target.Select
         SendKeys "%{Down}"
 Continue:
         On Error GoTo 0
@@ -116,7 +116,7 @@ Continue:
 End Function
 
 '   わざの選択。入力規則の設定
-Sub AtkSelected(ByVal Target As Range, _
+Sub AtkSelected(ByVal target As Range, _
                 Optional ByVal atkClass As Integer = -1, _
                 Optional ByVal species As String = "")
     Dim lo As ListObject
@@ -124,21 +124,21 @@ Sub AtkSelected(ByVal Target As Range, _
     Dim lst As Variant
     
     If GetAsyncKeyState(vbKeyEscape) Then
-        Call setInputList(Target)
+        Call setInputList(target)
         Exit Sub
     End If
-    Set lo = Target.Parent.ListObjects(1)
-    cname = lo.HeaderRowRange.cells(Target.column).text
+    Set lo = target.Parent.ListObjects(1)
+    cname = lo.HeaderRowRange.cells(target.column).text
     If atkClass < 0 Then atkClass = getAtkClassIndex(cname)
-    If species = "" Then species = getColumn(C_SpeciesName, Target).text
+    If species = "" Then species = getColumn(C_SpeciesName, target).text
     If Not speciesExists(species) Then Exit Sub
     lst = getAtkNames(species, True, True)
     '   何らかの入力があり、リストにないなら設定しないで終了
-    If Target.text <> "" And InStr(lst(atkClass), Target.text) < 1 Then Exit Sub
+    If target.text <> "" And InStr(lst(atkClass), target.text) < 1 Then Exit Sub
     ' ゲージ2と目標技には、未選択に戻す空白を追加
     If cname = IND_SpecialAtk2 Or cname = IND_TargetNormalAtk _
         Or cname = IND_TargetSpecialAtk Then lst(atkClass) = "　," & lst(atkClass)
-    Call setInputList(Target, lst(atkClass))
+    Call setInputList(target, lst(atkClass))
 End Sub
 
 '   わざを見るボタンの処理
@@ -236,18 +236,18 @@ End Sub
 
 '   わざのシートに種族名を書き込む
 Private Sub setSpeciesOnAtk(ByVal species As String)
-    Dim dspcol, stype As Variant
+    Dim dspCol, stype As Variant
     Dim i, j, gcol As Long
     Dim cur As Worksheet
     
     Set cur = ActiveSheet
-    dspcol = Array(R_NormalAtkSpeciesSelect, R_SpecialAtkSpeciesSelect)
+    dspCol = Array(R_NormalAtkSpeciesSelect, R_SpecialAtkSpeciesSelect)
     stype = Array("", "")
     If species <> "" Then
         stype = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2))
     End If
     For i = 0 To 1
-        With Range(dspcol(i))
+        With Range(dspCol(i))
             .value = species
             .Offset(0, 1).value = stype(0)
             .Offset(0, 1).Font.Color = getTypeColor(stype(0))
@@ -333,7 +333,7 @@ Err:
 End Sub
 
 '   わざの変更。色を付ける
-Sub AtkChange(ByVal Target As Range, _
+Sub AtkChange(ByVal target As Range, _
         Optional ByVal isInput As Boolean = True, _
         Optional ByVal atkClass As Variant = -1, _
         Optional ByVal species As String = "")
@@ -342,9 +342,9 @@ Sub AtkChange(ByVal Target As Range, _
     Dim cel As Range
     
     '   クラス（通常/ゲージ）の取得
-    If atkClass < 0 Then atkClass = getAttackClassByHeader(Target)
+    If atkClass < 0 Then atkClass = getAttackClassByHeader(target)
     typeColor = 0
-    atk = Target.text
+    atk = target.text
     If atk <> "" Then
         On Error GoTo unknownAttack
         atkType = getAtkAttr(atkClass, atk, C_Type)
@@ -352,38 +352,38 @@ Sub AtkChange(ByVal Target As Range, _
         typeColor = getTypeColor(atkType)
     End If
     If typeColor Then
-        Target.Font.Color = typeColor
+        target.Font.Color = typeColor
         If isInput Then
             On Error GoTo addAttack
-            If Target.Validation.Type = xlValidateList Then Exit Sub
+            If target.Validation.Type = xlValidateList Then Exit Sub
 addAttack:
             On Error GoTo 0
-            If species = "" Then species = getSpeciesFromCell(Target)
+            If species = "" Then species = getSpeciesFromCell(target)
             Call shSpecies.addAttackToSpecies(atkClass, atk, species)
         End If
     Else
-        Target.Font.ColorIndex = 1
+        target.Font.ColorIndex = 1
     End If
     Exit Sub
 unknownAttack:
     MsgBox msgstr(msgUnknownAttackName, Array(atkClass, atk))
-    Target.value = ""
+    target.value = ""
 End Sub
 
 '   ヘッダタイトルより、技クラス（通常/ゲージ）の取得
-Private Function getAttackClassByHeader(ByVal Target As Range) As Integer
+Private Function getAttackClassByHeader(ByVal target As Range) As Integer
     Dim cel As Range
     Dim atkClass As String
-    If Target.ListObject Is Nothing Then
+    If target.ListObject Is Nothing Then
         '   Targetがテーブルの外なので、範囲内まで遡る
-        Set cel = Target.Offset(-1, 0)
+        Set cel = target.Offset(-1, 0)
         While cel.ListObject Is Nothing And cel.row > 1
             Set cel = cel.Offset(-1, 0)
         Wend
         If cel.row = 1 Then Exit Function
-        atkClass = cel.ListObject.HeaderRowRange(1, Target.column).text
+        atkClass = cel.ListObject.HeaderRowRange(1, target.column).text
     Else
-        atkClass = Target.ListObject.HeaderRowRange(1, Target.column).text
+        atkClass = target.ListObject.HeaderRowRange(1, target.column).text
     End If
     If InStr(atkClass, C_SpecialAttack) > 0 Then
         getAttackClassByHeader = C_IdSpecialAtk
@@ -393,16 +393,16 @@ Private Function getAttackClassByHeader(ByVal Target As Range) As Integer
 End Function
 
 '   天候の変更。色を変える
-Public Sub weatherChange(ByVal Target As Range)
+Public Sub weatherChange(ByVal target As Range)
     Dim idx As Integer
     On Error GoTo Err
-    idx = WorksheetFunction.Match(Target.text, _
+    idx = WorksheetFunction.Match(target.text, _
             Range(R_WeatherTable).columns(1), 0)
     On Error GoTo 0
-    Target.Font.Color = Range(R_WeatherTable).cells(idx, 1).Font.Color
+    target.Font.Color = Range(R_WeatherTable).cells(idx, 1).Font.Color
     Exit Sub
 Err:
-    Target.Font.ColorIndex = 1
+    target.Font.ColorIndex = 1
 End Sub
 
 '   テーブルのヘッダタイトルのサフィックスの表示切替
@@ -470,168 +470,12 @@ Public Sub setTimeAndDate(ByVal rng As Range, ByVal start As Double)
 End Sub
 
 '   個体値の16進数を10進数に変換する
-Public Sub decimalizeIndivValue(ByVal Target As Range)
+Public Sub decimalizeIndivValue(ByVal target As Range)
     Dim c As Integer
-    c = Asc(UCase(left(Target.text, 1))) - 55
+    c = Asc(UCase(left(target.text, 1))) - 55
     If 9 < c And c < 16 Then
-        Target.value = c
-    ElseIf Target.value = 0 And Target.text <> "0" Then
-        Target.ClearContents
-    End If
-End Sub
-
-'   コンボボックスのシート選択メニュー作成
-Public Sub setComboMenu(ByRef cmb As ComboBox, _
-                    Optional ByRef shs As Variant = Nothing, _
-                    Optional ByRef names As Variant = Nothing, _
-                    Optional ByRef commands As Variant = Nothing)
-    Dim sh, nm, sheets As Variant
-    With cmb
-        .Clear
-        If IsArray(shs) Then
-            For Each sh In shs
-                .AddItem sh.name
-            Next
-        End If
-        If IsArray(names) Then
-            For Each nm In names
-                sheets = getSheetsByName(nm)
-                For Each sh In sheets
-                    .AddItem sh.name
-                Next
-            Next
-        End If
-        If IsArray(commands) Then
-            For Each nm In commands
-                .AddItem nm
-            Next
-        End If
-    End With
-End Sub
-
-'   コンボボックスの値よりワークシートを得る
-Public Function getSheetFromCombo(ByRef cmb As ComboBox) As Worksheet
-    Dim sh As Variant
-    With cmb
-        For Each sh In Worksheets
-            If .value = sh.name Then
-                Set getSheetFromCombo = sh
-                Exit For
-            End If
-        Next
-    End With
-End Function
-
-'   種族、種族分析シートに移動
-Public Sub jumpToSpeciesSheet(ByVal sh As Worksheet, Optional ByVal both As Boolean = True)
-    Dim sha As Worksheet
-    Dim species As String
-    If sh Is shSpeciesAnalysis1 Then Set sha = shSpecies Else Set sha = shSpeciesAnalysis1
-    species = getSpeciesFromCell()
-    If species <> "" Then
-        If both Then Call activateSpeciesSheet(sha, species, False)
-        Call activateSpeciesSheet(sh, species, True)
-    End If
-End Sub
-
-'   種族、種族分析シートに移動
-Private Sub activateSpeciesSheet(ByVal sh As Worksheet, _
-                    ByVal species As String, ByVal log As Boolean)
-    Dim row As Long
-    With sh
-        row = searchRow(species, C_SpeciesName, .ListObjects(1))
-        Call jumpTo(.ListObjects(1).DataBodyRange.cells(row, 1), log)
-    End With
-End Sub
-
-'   わざシートに移動
-Public Sub jumpToAttackSheet(ByVal sh As Worksheet)
-    Call doMacro(msgSelectingAttack)
-    Call selectSpeciesForAtkTable
-    Call doMacro
-    Call jumpTo(sh, True)
-End Sub
-
-'   個体マップに移動
-Public Sub jumpToIndMap(ByVal sh As Worksheet, ByVal sameType As Boolean)
-    Dim species As String
-    Dim name As String
-    '   絞り込み処理
-    species = getSpeciesFromCell()
-    name = getColumn(IND_Nickname, ActiveCell).text
-    If species <> "" Then
-        If sameType Then
-            Call setSameTypeToMap(species, sh.Range(IMAP_R_TypeSelect))
-        Else
-            Call setSameTypeToMap("", sh.Range(IMAP_R_TypeSelect))
-        End If
-        sh.Range(IMAP_R_IndivSelect).value = name
-    End If
-    Call jumpTo(sh)
-End Sub
-
-'   種族マップに移動
-Public Sub jumpToSpecMap(ByVal sh As Worksheet, ByVal sameType As Boolean)
-    Dim species As String
-    Dim stype As Variant
-    species = getSpeciesFromCell()
-    If species <> "" Then
-        If sameType Then
-            Call setSameTypeToMap(species, sh.Range(R_SpeciesMapTypeSelect))
-        Else
-            Call setSameTypeToMap("", sh.Range(R_SpeciesMapTypeSelect))
-        End If
-        sh.Range(R_SpeciesMapSpeciesSelect).value = species
-    End If
-    Call jumpTo(sh)
-End Sub
-
-'   コンボボックスのコマンドの実行
-Public Sub execCombCommand(ByRef sh As Worksheet, ByRef cmb As ComboBox, _
-                            ByVal sameType As Boolean, _
-                        Optional ByVal flterInd As Range = Nothing)
-    Dim shTo As Worksheet
-    Dim species As String
-    If cmb.value = cmdFilterReset Then
-        Call resetTableFilter(sh)
-        If Not flterInd Is Nothing Then
-            flterInd.ClearContents
-        End If
-    ElseIf cmb.value = cmdSortReset Then
-        Call CallByName(sh, "sortNormally", VbMethod)
-    Else
-        Set shTo = getSheetFromCombo(cmb)
-        If Not shTo Is Nothing Then Call jumpConsideringSpecies(shTo, sameType)
-    End If
-    Call enableEvent(False)
-    cmb.value = ""
-    Call enableEvent(True)
-End Sub
-
-'   他のシートに移動
-Private Sub jumpConsideringSpecies(ByVal sh As Object, ByVal sameType As Boolean)
-    Dim sw As Boolean
-    '   複数セル選択かテーブルデータ外なら単に移動
-    If ActiveCell.CountLarge <> 1 Or _
-        Application.Intersect(ActiveCell, ActiveSheet.ListObjects(1).DataBodyRange) Is Nothing Then
-        Call jumpTo(sh)
-    '   種族か種族分析
-    ElseIf sh Is shSpecies Or sh Is shSpeciesAnalysis1 Then
-        If ActiveSheet Is shSpecies Or ActiveSheet Is shSpeciesAnalysis1 Then
-            Call jumpToSpeciesSheet(sh, False)
-        Else
-            Call jumpToSpeciesSheet(sh, True)
-        End If
-    '   わざ
-    ElseIf sh Is shNormalAttack Or sh Is shSpecialAttack Then
-        If selectSpeciesForAtkTable() Then Call jumpTo(sh, True)
-    '  種族マップ
-    ElseIf sh Is shSpeciesMap Then
-        Call jumpToSpecMap(sh, sameType)
-    '  個体マップ
-    ElseIf checkNameInSheet(sh, IMAP_R_Settings) Then
-        Call jumpToIndMap(sh, sameType)
-    Else
-        Call jumpTo(sh)
+        target.value = c
+    ElseIf target.value = 0 And target.text <> "0" Then
+        target.ClearContents
     End If
 End Sub

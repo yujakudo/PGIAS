@@ -12,9 +12,7 @@ Attribute VB_Exposed = True
 '   シートアクティブ
 '   コンボボックスの設定
 Private Sub Worksheet_Activate()
-    Call setComboMenu(cmbJump, Array( _
-            shSpeciesAnalysis1, shNormalAttack, shSpecialAttack, shSpeciesMap), _
-            Nothing, Array(cmdFilterReset, cmdSortReset))
+    Call setComboMenuOfSpeciesTable(Me, cmbJump)
 End Sub
 
 '   移動コンボボックスの変更
@@ -25,6 +23,8 @@ End Sub
 '   コントロールのクリア
 Public Sub clearControls()
     chkSameType.value = False
+    Call resetTableFilter(Me)
+    Call sortNormally
 End Sub
 
 '   種族テーブルの調整

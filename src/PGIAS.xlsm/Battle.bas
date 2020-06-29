@@ -18,7 +18,7 @@ Dim InterTypeFactorTable As Variant
 Dim WeatherFactorTable As Variant
 Dim TypeMatchFactorValue As Double
 Dim MatchBattleFactorValue As Double
-Dim ChargeByDamage As Double
+Dim ChargeByDamage(1) As Double
 
 '   通常わざ
 Public Type NormalAttack
@@ -464,7 +464,7 @@ Private Function hitAttack(ByRef offence As Monster, ByRef deffence As Monster, 
         End With
         '   ダメージによる防御側のチャージ
         With deffence.attacks(deffence.atkIndex(1).selected)
-            .special.curVol = .special.curVol + damage * ChargeByDamage
+            .special.curVol = .special.curVol + damage * ChargeByDamage(deffence.mode)
             '   ジムの場合は満タン
             If .special.curVol > RSV_MAX And deffence.mode = C_IdGym Then
                .special.curVol = RSV_MAX
@@ -1142,7 +1142,8 @@ Public Sub makeInfluenceCache()
     WeatherFactorTable = makeWeatherFactorTable
     TypeMatchFactorValue = Range(R_TypeMatchFactor).value
     MatchBattleFactorValue = Range(R_MtcBtlFactor).value
-    ChargeByDamage = Range(R_ChargeByDamage).value
+    ChargeByDamage(0) = Range(R_ChargeByDamage).cells(1, 1).value
+    ChargeByDamage(1) = Range(R_ChargeByDamage).cells(2, 1).value
 End Sub
 
 '   相関表の作成
@@ -1418,12 +1419,12 @@ End Function
 
 '   ターゲットCPに合う個体値の探索
 '   戻り値は配列の配列（通常のランキングと、10以上に縛ったランキング
-Function getFitIndiv(ByRef self As Monster, ByVal TCP As Long, _
+Function getFitIndiv(ByRef self As Monster, ByVal tCP As Long, _
                     Optional ByVal rnkNum As Integer = 100, _
                     Optional ByVal lrnkNum As Integer = 20) As Variant
     Dim atk, def, hp, cnt, lcnt As Long
-    Dim PLlim(1), CPM(), CPM2(), DH, ADH, drv, CP, cpg As Double
-    Dim n, i As Integer
+    Dim PLlim(1), CPM(), CPM2(), PLs(), DH, ADH, drv, CP, cpg As Double
+    Dim liPL, i As Integer
     Dim sv, rnk(), lrnk(), vals, min As Variant
     Dim enemy As Monster
     
@@ -1434,22 +1435,22 @@ Function getFitIndiv(ByRef self As Monster, ByVal TCP As Long, _
     Call getMonsterByPower(enemy)
     sv = getSpcAttrs(self.species, Array("ATK", "DEF", "HP"))
     '   種族値よりPLの範囲を得、CMP^2を計算しておく
-    If TCP > 0 Then
+    If tCP > 0 Then
         cpg = sv(0) * Sqr(sv(1) * sv(2)) / 10
-        PLlim(1) = getPLbyCpg(TCP, cpg)
+        PLlim(1) = getPLbyCpg(tCP, cpg)
         cpg = (sv(0) + 15) * Sqr((sv(1) + 15) * (sv(2) + 15)) / 10
-        PLlim(0) = getPLbyCpg(TCP, cpg)
-        n = (PLlim(1) - PLlim(0)) * 2
-        ReDim CPM(n), CPM2(n)
-        For i = 0 To n
-            CPM(i) = getCPM(PLlim(0) + 0.5 * i)
-            CPM2(i) = CPM(i) ^ 2
-        Next
+        PLlim(0) = getPLbyCpg(tCP, cpg)
+        liPL = (PLlim(1) - PLlim(0)) * 2
     Else
-        ReDim CPM(0), CPM2(0)
-        CPM(0) = getCPM(40)
-        CPM2(0) = CPM(0) ^ 2
+        PLlim(0) = 40
+        liPL = 0
     End If
+    ReDim CPM(liPL), CPM2(liPL), PLs(liPL)
+    For i = 0 To liPL
+        PLs(i) = PLlim(0) + 0.5 * i
+        CPM(i) = getCPM(PLs(i))
+        CPM2(i) = CPM(i) ^ 2
+    Next
     ReDim rnk(rnkNum), lrnk(lrnkNum)
     min = Array(-1, -1, -1, C_MaxLong)
     For def = 0 To 15
@@ -1461,9 +1462,9 @@ Function getFitIndiv(ByRef self As Monster, ByVal TCP As Long, _
                 self.indATK = atk
                 ADH = (sv(0) + atk) * DH / 10
                 drv = 0
-                For i = n To 0 Step -1
+                For i = liPL To 0 Step -1
                     CP = CPM2(i) * ADH
-                    If TCP <= 0 Or CP < TCP + 1 Then
+                    If tCP <= 0 Or CP < tCP + 1 Then
                         self.atkPower = (self.indATK + sv(0)) * CPM(i)
                         self.defPower = (self.indDEF + sv(1)) * CPM(i)
                         self.hpPower = (self.indHP + sv(2)) * CPM(i)
@@ -1472,7 +1473,7 @@ Function getFitIndiv(ByRef self As Monster, ByVal TCP As Long, _
                     End If
                 Next
                 If drv > 0 Then
-                    vals = Array(atk, def, hp, drv, CP)
+                    vals = Array(atk, def, hp, drv, CP, PLs(i))
                     cnt = cnt + 1
                     Call rankIn(rnk, vals)
                     If atk > 9 And def > 9 And hp > 9 Then
@@ -1486,7 +1487,7 @@ Function getFitIndiv(ByRef self As Monster, ByVal TCP As Long, _
     Next
     If cnt > rnkNum Then cnt = rnkNum
     If cnt > 0 Then
-        If (TCP <= 0 And rnk(0)(4) > C_UpperCPl2) Or (TCP > 0 And rnk(0)(4) >= TCP - OUT_OF_LEAGUE_LINE) Then
+        If (tCP <= 0 And rnk(0)(4) > C_UpperCPl2) Or (tCP > 0 And rnk(0)(4) >= tCP - OUT_OF_LEAGUE_LINE) Then
             ReDim Preserve rnk(cnt - 1)
             If lcnt > lrnkNum Then lcnt = lrnkNum
             ReDim Preserve lrnk(lcnt - 1)
@@ -1557,6 +1558,13 @@ Public Function calcTCP(ByRef self As Monster, ByRef enemy As Monster, _
     End If
 End Function
 
-
+'   SCP等の取得
+Public Function getSCP(ByRef mon As Monster) As Variant
+    getSCP = Array( _
+        (mon.atkPower * mon.defPower * mon.hpPower) ^ (2 / 3) / 10, _
+        (mon.atkPower * mon.defPower ^ 2 * mon.hpPower ^ 2) ^ (2 / 5) / 10, _
+        getEndurance(mon.defPower, mon.hpPower) _
+    )
+End Function
 
 

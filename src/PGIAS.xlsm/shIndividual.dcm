@@ -36,67 +36,73 @@ Private Sub btnSetTarget_Click()
 End Sub
 
 '   セルの選択
-Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+Private Sub Worksheet_SelectionChange(ByVal target As Range)
     Dim tcol As String
     '   複数セル選択か、テーブルデータの選択でないなら終了
-    If Target.CountLarge <> 1 Or _
-        Application.Intersect(Target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
+    If target.CountLarge <> 1 Or _
+        Application.Intersect(target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
     Call setInputList   '   前の入力規則のクリア
-    tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).text
+    tcol = ListObjects(1).HeaderRowRange.cells(1, target.column).text
     '   タイプ2の選択
     If tcol = IND_Type2 Then
-        Call Type2Selected(Target)
+        Call Type2Selected(target)
     '   種族名
     ElseIf tcol = IND_Species Then
-        Call speciesSelected(Target)
+        Call speciesSelected(target)
     '   わざ
     ElseIf tcol = IND_NormalAtk Or tcol = IND_SpecialAtk1 Or tcol = IND_SpecialAtk2 _
             Or tcol = IND_TargetNormalAtk Or tcol = IND_TargetSpecialAtk Then
-        Call AtkSelected(Target)
+        Call AtkSelected(target)
+    '   潜在値の進化先
+    ElseIf tcol = IND_EvolveTo Then
+        Call EvoluveToSelected(target)
     End If
 End Sub
 
 '   セル値の変更
-Private Sub Worksheet_Change(ByVal Target As Range)
+Private Sub Worksheet_Change(ByVal target As Range)
     Dim tcol As String
-    If Not Application.Intersect(Target, Range(IND_R_FilterIndicator)) Is Nothing Then
-        Call setFilter(Target)
+    If Not Application.Intersect(target, Range(IND_R_FilterIndicator)) Is Nothing Then
+        Call setFilter(target)
         Exit Sub
     End If
-    If Application.Intersect(Target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
+    If Application.Intersect(target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
     '   全角スペースのみはクリア
-    If Target.text = "　" Then Target.ClearContents: Exit Sub
-    tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).text
+    If target.text = "　" Then target.ClearContents: Exit Sub
+    tcol = ListObjects(1).HeaderRowRange.cells(1, target.column).text
     ' タイプ1,2
     If tcol = IND_Type1 Or tcol = IND_Type2 Then
-        Call TypeChange(Target)
+        Call TypeChange(target)
     '   種族名
     ElseIf tcol = IND_Species Then
-            Call speciesChange(Target)
+            Call speciesChange(target)
     '   PL
     ElseIf tcol = IND_CP Or tcol = IND_HP Or tcol = IND_fixPL Or tcol = IND_TargetPL Then
         shIndividual.Calculate
         Call enableEvent(False)
-        Call setAtkParams(Target)
+        Call setAtkParams(target)
         Call enableEvent(True)
     '   個体値
     ElseIf tcol = IND_indATK Or tcol = IND_indDEF Or tcol = IND_indHP Then
         Call enableEvent(False)
-        Call decimalizeIndivValue(Target)
-        Call setAtkParams(Target)
+        Call decimalizeIndivValue(target)
+        Call setAtkParams(target)
         Call enableEvent(True)
     '   わざ
     ElseIf tcol = IND_NormalAtk Or tcol = IND_SpecialAtk1 Or tcol = IND_SpecialAtk2 _
             Or tcol = IND_TargetNormalAtk Or tcol = IND_TargetSpecialAtk Then
-        Call AtkChange(Target)
+        Call AtkChange(target)
         Call enableEvent(False)
-        Call setAtkParams(Target)
+        Call setAtkParams(target)
         Call enableEvent(True)
+    '   潜在値の進化先
+    ElseIf tcol = IND_EvolveTo Then
+        Call changeEvolveTo(target)
     End If
 End Sub
 
 '   特殊なフィルタの設定
-Private Sub setFilter(ByVal Target As Range)
+Private Sub setFilter(ByVal target As Range)
     Dim tcol, fcol As String
     Dim col  As Long
     Dim crit As Variant
@@ -104,7 +110,7 @@ Private Sub setFilter(ByVal Target As Range)
     ope = xlOr
     Me.Calculate
     With ListObjects(1)
-        tcol = .HeaderRowRange.cells(1, Target.column).text
+        tcol = .HeaderRowRange.cells(1, target.column).text
         '   タイプでフィルタ
         If tcol = IND_Type1 Then
             fcol = IND_FilterType
@@ -112,24 +118,24 @@ Private Sub setFilter(ByVal Target As Range)
         '   系統でフィルタ
         ElseIf tcol = IND_Species Then
             fcol = IND_Species
-            If speciesExpectation(Target) Then
-                crit = getEvolutionalyLine(Target.text, "111", "array")
+            If speciesExpectation(target) Then
+                crit = getEvolutionalyLine(target.text, "111", "array")
                 ope = xlFilterValues
             End If
         '   通常わざ
         ElseIf tcol = IND_NormalAtk Then
             fcol = IND_FilterNormalAtk
-            crit = Target.value
+            crit = target.value
         '   ゲージわざ
         ElseIf tcol = IND_SpecialAtk1 Then
             fcol = IND_FilterSpecialAtk
-            crit = "=*" & Target.value & "*"
+            crit = "=*" & target.value & "*"
         Else
             Exit Sub
         End If
         If fcol <> "" Then
             col = .ListColumns(fcol).DataBodyRange.column
-            If Target.text = "" Then
+            If target.text = "" Then
                 .Range.AutoFilter Field:=col
             Else
                 .Range.AutoFilter Field:=col, Criteria1:=crit, Operator:=ope
@@ -139,65 +145,72 @@ Private Sub setFilter(ByVal Target As Range)
 End Sub
 
 '   タイプ2選択。入力規則を設定する
-Private Sub Type2Selected(ByVal Target As Range)
+Private Sub Type2Selected(ByVal target As Range)
     Dim lst As String
-    lst = getType2Candidate(Target.Offset(0, -1).text)
-    Call setInputList(Target, lst)
+    lst = getType2Candidate(target.Offset(0, -1).text)
+    Call setInputList(target, lst)
 End Sub
 
 '   タイプの変更、色を変える
-Private Sub TypeChange(ByVal Target As Range)
+Private Sub TypeChange(ByVal target As Range)
     Dim tc As Long
-    tc = getTypeIndex(Target.text)
+    tc = getTypeIndex(target.text)
     If tc Then
         tc = getTypeColor(tc)
-        Target.Font.Color = tc
+        target.Font.Color = tc
     Else
-        Target.Font.ColorIndex = 1
+        target.Font.ColorIndex = 1
     End If
 End Sub
 
 '   種族名の選択。入力規則を設定する。
-Private Sub speciesSelected(ByVal Target As Range)
+Private Sub speciesSelected(ByVal target As Range)
     Dim lst As String
-    lst = getSpecCandidate(getColumn(IND_Type1, Target).text, _
-                            getColumn(IND_Type2, Target).text)
-    Call setInputList(Target, lst)
+    lst = getSpecCandidate(getColumn(IND_Type1, target).text, _
+                            getColumn(IND_Type2, target).text)
+    Call setInputList(target, lst)
+End Sub
+
+'   潜在値の進化先の選択。
+Private Sub EvoluveToSelected(ByVal target As Range)
+    Dim lst As String
+    lst = getEvolutionalyLine(getColumn(IND_Species, target).text, "011", "str")
+    Call setInputList(target, lst)
 End Sub
 
 '   種族名の変更。
-Private Sub speciesChange(ByVal Target As Range)
+Private Sub speciesChange(ByVal target As Range)
     Dim setSpecies As Boolean
     Dim species As String
     Dim types As Variant
     setSpecies = True
     ' タイプの入力がなかったら予測候補の設定
-    If getColumn(IND_Type1, Target).text = "" _
-            And getColumn(IND_Type2, Target).text = "" Then
-        setSpecies = speciesExpectation(Target)
+    If getColumn(IND_Type1, target).text = "" _
+            And getColumn(IND_Type2, target).text = "" Then
+        setSpecies = speciesExpectation(target)
     End If
     '   タイプの入力ありか、予測によって種族が確定していたら、タイプの取得
     If setSpecies Then
-        species = getColumn(IND_Species, Target).text
+        species = getColumn(IND_Species, target).text
         If setSpecies And species <> "" Then
             types = getSpcAttrs(species, Array(SPEC_Type1, SPEC_Type2, SPEC_Number))
         End If
     End If
     '   タイプが取得されていたら、タイプと番号を書き込み
     If IsArray(types) Then
-        getColumn(IND_Type1, Target).value = types(0)
-        getColumn(IND_Type2, Target).value = types(1)
-        getColumn(IND_Number, Target).value = types(2)
+        getColumn(IND_Type1, target).value = types(0)
+        getColumn(IND_Type2, target).value = types(1)
+        getColumn(IND_Number, target).value = types(2)
     Else
-        Union(getColumn(IND_Type1, Target), _
-                getColumn(IND_Type2, Target), _
-                getColumn(IND_Number, Target)).ClearContents
+        Union(getColumn(IND_Type1, target), _
+                getColumn(IND_Type2, target), _
+                getColumn(IND_Number, target)).ClearContents
     End If
 End Sub
 
 '   わざの数値のセット
 '   イベント制御は呼び出し側で行う
-Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As IND_CalsFlags = 0)
+Private Sub setAtkParams(ByVal target As Range, Optional ByVal force As IND_CalsFlags = 0)
     Dim tcol As String
     Dim self As Monster
     Dim enemy As Monster
@@ -207,9 +220,9 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As IND_Cals
     Dim prPL As Double
     Dim changed(1), changedTargetAtk, changedCurPL, changedPrPL, proced As Boolean
     
-    If Not getIndividual(Target, self) And force = 0 Then Exit Sub
+    If Not getIndividual(target, self) And force = 0 Then Exit Sub
     '   変化した列タイトルの取得と、その概要の真偽値
-    tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).text
+    tcol = ListObjects(1).HeaderRowRange.cells(1, target.column).text
     changed(C_IdNormalAtk) = InStr(tcol, C_NormalAttack) > 0
     changed(C_IdSpecialAtk) = InStr(tcol, C_SpecialAttack) > 0
     changedTargetAtk = (tcol = IND_TargetNormalAtk Or tcol = IND_TargetSpecialAtk)
@@ -218,12 +231,12 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As IND_Cals
     
     Call getMonsterByPower(enemy)   '   ダミー値
     curPL = self.PL
-    prPL = val(getColumn(IND_prPL, Target).value)
+    prPL = val(getColumn(IND_prPL, target).value)
     '   設定列タイトルの取得
     cols = getSettingColumns()
     '   書き込み
     For mode = 0 To 1
-        Call setIndividualAttacks(self, mode, 2, Target)
+        Call setIndividualAttacks(self, mode, 2, target)
         '   最初に一回わざのインデックスの取得。技が設定されている必要があるため
         If mode = 0 Then
             atkIdx = getAtkIndex(self, prPL)
@@ -239,16 +252,16 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As IND_Cals
             End If
             If force Or Not changed(C_IdSpecialAtk) Then
                 '   通常
-                Call setDamageAndDPS(Target, cols(0)(mode), _
+                Call setDamageAndDPS(target, cols(0)(mode), _
                         self, enemy, atkIdx(C_IdNormalAtk, 0))
             End If
             '   ゲージ
-            Call setDamageAndDPS(Target, cols(1)(mode), _
+            Call setDamageAndDPS(target, cols(1)(mode), _
                     self, enemy, atkIdx(C_IdSpecialAtk, 0))
             '   ゲージ2
             idx = atkIdx(C_IdSpecialAtk, 0) + 1
             If idx > self.atkIndex(1).upper Then idx = -1
-            Call setDamageAndDPS(Target, cols(2)(mode), self, enemy, idx)
+            Call setDamageAndDPS(target, cols(2)(mode), self, enemy, idx)
         End If
         '   予測
         self.PL = prPL
@@ -257,32 +270,32 @@ Private Sub setAtkParams(ByVal Target As Range, Optional ByVal force As IND_Cals
         self.atkIndex(1).selected = self.atkIndex(1).lower
         If (force And F_PREDICTION) Or (Not changed(C_IdSpecialAtk) And Not proced) Then
             '   予測ジム通常
-            Call setDamageAndDPS(Target, cols(3)(mode), _
+            Call setDamageAndDPS(target, cols(3)(mode), _
                     self, enemy, atkIdx(C_IdNormalAtk, 1))
         End If
         If (force And F_PREDICTION) Or (Not changed(C_IdNormlaAtk) And Not proced) Then
             '   予測ジムゲージ
-            Call setDamageAndDPS(Target, cols(4)(mode), _
+            Call setDamageAndDPS(target, cols(4)(mode), _
                     self, enemy, atkIdx(C_IdSpecialAtk, 1))
         End If
         '   予測ジムcDPS
         self.atkIndex(0).selected = self.atkIndex(0).lower
         idx = 0
         If curPL = prPL And atkIdx(C_IdNormalAtk, 1) < 0 And atkIdx(C_IdSpecialAtk, 1) < 0 Then idx = -1
-        Call setCDPS(Target, cols(5)(mode), self, enemy, idx)
+        Call setCDPS(target, cols(5)(mode), self, enemy, idx)
     Next
     '   現在値と同条件のとき、リーグ別潜在値セット。
     If (force And F_CURRENT) Or (Not changedTargetAtk _
                 And Not changedPrPL And Not proced) Then
         self.PL = curPL
         Call calcMonPowers(self)
-        Call setPotential(Target, self, enemy)
+        Call setPotential(target, self, enemy)
     End If
 End Sub
 
 
 '   ダメージとDPSのセット
-Private Sub setDamageAndDPS(ByVal Target As Range, ByVal columns As Variant, _
+Private Sub setDamageAndDPS(ByVal target As Range, ByVal columns As Variant, _
                 ByRef self As Monster, ByRef enemy As Monster, _
                 ByVal atkIdx As Integer)
     Dim col As Variant
@@ -292,34 +305,34 @@ Private Sub setDamageAndDPS(ByVal Target As Range, ByVal columns As Variant, _
     colLim = UBound(columns)
     If self.PL > 0 And atkIdx >= 0 Then
         Call calcADamage(atkIdx, self, enemy, True)
-        Call setAtkNameToCol(self, atkIdx, columns(0), Target)
+        Call setAtkNameToCol(self, atkIdx, columns(0), target)
         With self.attacks(atkIdx)
             idx = 1
-            getColumn(columns(idx), Target).value = .damage
+            getColumn(columns(idx), target).value = .damage
             idx = idx + 1
             '   対戦のゲージわざはDPSなし
             If self.mode <> C_IdMtc Or .class <> 1 Then
-                getColumn(columns(idx), Target).value = .damage / .idleTime
+                getColumn(columns(idx), target).value = .damage / .idleTime
                 idx = idx + 1
             End If
             '   ゲージ技で列があればCDPS追記
             If .class = 1 And idx <= colLim Then
                 self.atkIndex(1).selected = atkIdx
                 cdpss = calcCDPS(self, enemy, True)
-                getColumn(columns(idx), Target).value = cdpss.cDPS
+                getColumn(columns(idx), target).value = cdpss.cDPS
                 idx = idx + 1
                 If idx <= colLim Then   '   周期
-                    getColumn(columns(idx), Target).value = cdpss.Cycle
+                    getColumn(columns(idx), target).value = cdpss.Cycle
                 End If
             End If
         End With
     Else
-        Call eraseColumns(columns, Target)
+        Call eraseColumns(columns, target)
     End If
 End Sub
 
 '   cDPSのセット
-Private Sub setCDPS(ByVal Target As Range, ByVal columns As Variant, _
+Private Sub setCDPS(ByVal target As Range, ByVal columns As Variant, _
                 ByRef self As Monster, ByRef enemy As Monster, _
                 ByVal atkIdx As Integer)
     Dim maxCDPS, cyc As Double
@@ -333,9 +346,9 @@ Private Sub setCDPS(ByVal Target As Range, ByVal columns As Variant, _
     If self.PL > 0 And atkIdx > 0 And self.atkIndex(1).lower <= atkIdx And atkIdx <= self.atkIndex(1).upper Then
         self.atkIndex(1).selected = atkIdx
         cdpss = calcCDPS(self, enemy, True)
-        getColumn(columns(0), Target).value = cdpss.cDPS
-        If colLim >= 1 Then getColumn(columns(1), Target).value = self.attacks(self.atkIndex(0).selected).name
-        If colLim >= 2 Then getColumn(columns(2), Target).value = self.attacks(self.atkIndex(1).selected).name
+        getColumn(columns(0), target).value = cdpss.cDPS
+        If colLim >= 1 Then getColumn(columns(1), target).value = self.attacks(self.atkIndex(0).selected).name
+        If colLim >= 2 Then getColumn(columns(2), target).value = self.attacks(self.atkIndex(1).selected).name
     '   0で有効なら最大値を計算
     ElseIf self.PL > 0 And atkIdx = 0 And self.atkIndex(1).lower >= 0 Then
         maxAtkIdx(0) = self.atkIndex(0).selected
@@ -348,23 +361,23 @@ Private Sub setCDPS(ByVal Target As Range, ByVal columns As Variant, _
                 maxAtkIdx(1) = atkIdx
             End If
         Next
-        getColumn(columns(0), Target).value = maxCDPS
-        If colLim >= 1 Then Call setAtkNameToCol(self, maxAtkIdx(0), columns(1), Target)
-        If colLim >= 2 Then Call setAtkNameToCol(self, maxAtkIdx(1), columns(2), Target)
-        If colLim >= 3 Then getColumn(columns(3), Target).value = cyc
+        getColumn(columns(0), target).value = maxCDPS
+        If colLim >= 1 Then Call setAtkNameToCol(self, maxAtkIdx(0), columns(1), target)
+        If colLim >= 2 Then Call setAtkNameToCol(self, maxAtkIdx(1), columns(2), target)
+        If colLim >= 3 Then getColumn(columns(3), target).value = cyc
     '   それ以外は消す
     Else
-        Call eraseColumns(columns, Target)
+        Call eraseColumns(columns, target)
     End If
 End Sub
 
 '   他列に技名をセットする
 Private Sub setAtkNameToCol(ByRef mon As Monster, ByVal atkIdx As Integer, _
-                ByVal column As Variant, ByVal Target As Range)
+                ByVal column As Variant, ByVal target As Range)
     Dim cel As Range
     
     If column = "" Then Exit Sub
-    Set cel = getColumn(column, Target)
+    Set cel = getColumn(column, target)
     If atkIdx >= 0 Then
         With mon.attacks(atkIdx)
             cel.value = .name
@@ -377,10 +390,10 @@ Private Sub setAtkNameToCol(ByRef mon As Monster, ByVal atkIdx As Integer, _
 End Sub
 
 '   指定の列の値を消す
-Private Sub eraseColumns(columns As Variant, ByVal Target As Range)
+Private Sub eraseColumns(columns As Variant, ByVal target As Range)
     Dim col As Variant
     For Each col In columns
-        If col <> "" Then getColumn(col, Target).ClearContents
+        If col <> "" Then getColumn(col, target).ClearContents
     Next
 End Sub
 
@@ -445,32 +458,45 @@ Private Function getSettingColumns()
 End Function
 
 '   潜在値のセット
-'   monのわざの設定は変更される。
-Private Sub setPotential(ByVal Target As Range, ByRef mon As Monster, ByRef enemy As Monster)
-    Dim topCols, TCPlim, TCP As Variant
+'   monの種族、パワー、CP及びわざの設定は変更される。
+Private Sub setPotential(ByVal target As Range, ByRef mon As Monster, ByRef enemy As Monster)
+    Dim topCols, TCPlim, tCP As Variant
     Dim i As Integer
     Dim cpg, curPL As Double
+    Dim evolveTo As String
+    Dim setSpecies As Boolean
     
     topCols = getColumnIndexes(Me, Array(IND_ptPL & "1", IND_ptPL & "2", IND_ptPL & "3"))
-    Range(cells(Target.row, topCols(0)), cells(Target.row, _
+    Range(cells(target.row, topCols(0)), cells(target.row, _
             topCols(0) + (topCols(1) - topCols(0)) * 3 - 1)).ClearContents
     If mon.PL = 0 Then Exit Sub
+    '   進化先の取得。書かれていればmonに設定して再計算
+    setSpecies = False
+    evolveTo = getColumn(IND_EvolveTo, target)
+    If evolveTo <> "" And evolveTo <> mon.species Then
+        mon.species = evolveTo
+        Call calcMonPowers(mon)
+        setSpecies = True
+    End If
     '   わざの設定とTCP最大/最小の取得
-    cpg = getParameterForPotential(mon, TCPlim, Target)
+    cpg = getParameterForPotential(mon, TCPlim, target)
     If cpg = 0 Then Exit Sub
     curPL = mon.PL
     '   リーグ別ループ
     For i = 0 To 2
         If TCPlim(i)(0) = 0 Then Exit For
-        TCP = getPotentialTCP(mon, enemy, cpg, i)
+        tCP = getPotentialTCP(mon, enemy, cpg, i)
         If curPL <= mon.PL Then
-            With cells(Target.row, topCols(i))
+            With cells(target.row, topCols(i))
                 .value = mon.PL
                 .Offset(0, 1).value = mon.CP
-                .Offset(0, 2).value = TCP(1)
-    '            .Offset(0, 3).value = (TCP(1) - TCPlim(1)) / (TCPlim(0) - TCPlim(1)) * 100
-                .Offset(0, 3).value = TCP(0)
-                .Offset(0, 4).value = (TCP(0) - TCPlim(i)(1)) / (TCPlim(i)(0) - TCPlim(i)(1)) * 100
+                If setSpecies Then
+                    .Offset(0, 2).ClearContents
+                Else
+                    .Offset(0, 2).value = tCP(1)
+                End If
+                .Offset(0, 3).value = tCP(0)
+                .Offset(0, 4).value = (tCP(0) - TCPlim(i)(1)) / (TCPlim(i)(0) - TCPlim(i)(1)) * 100
             End With
         End If
     Next
@@ -479,7 +505,7 @@ End Sub
 '   潜在値計算のためのパラメータの取得
 '   戻り値はcpg
 Public Function getParameterForPotential(ByRef mon As Monster, ByRef TCPlim As Variant, _
-                                Optional ByVal Target As Range = Nothing) As Double
+                                Optional ByVal target As Range = Nothing) As Double
     Dim iv, sv, c, atks As Variant
     getParameterForPotential = 0
     sv = seachAndGetValues(mon.species, SA1_Name, shSpeciesAnalysis1, _
@@ -489,10 +515,10 @@ Public Function getParameterForPotential(ByRef mon As Monster, ByRef TCPlim As V
             SA1_CDST_NormalAtkName & "1", SA1_CDST_SpecialAtkName & "1"))
     If sv(0) = 0 Then Exit Function
     TCPlim = Array(Array(sv(0), sv(1)), Array(sv(2), sv(3)), Array(sv(4), sv(5)))
-    If Target Is Nothing Then
+    If target Is Nothing Then   '   cDPS最大技を設定
         atks = Array(Array(sv(6)), Array(sv(7)))
-    Else
-        iv = getRowValues(Target, Array(IND_NormalAtk, IND_SpecialAtk1, IND_SpecialAtk2))
+    Else    '   選択セルの行より技を取得。cDPS最大技の後ろに設定
+        iv = getRowValues(target, Array(IND_NormalAtk, IND_SpecialAtk1, IND_SpecialAtk2))
         If iv(0) = "" Or iv(1) = "" Then Exit Function
         atks = Array(Array(sv(6), iv(0)), Array(sv(7), iv(1), iv(2)))
     End If
@@ -504,9 +530,8 @@ End Function
 '   TCPの取得。わざ変、手持ち技、の順
 '   mon.PL, mon.CPは変更される
 Public Function getPotentialTCP(ByRef mon As Monster, ByRef enemy As Monster, _
-                                ByVal cpg As Double, _
-                                ByVal lidx As Integer) As Variant
-    Dim TCP() As Double
+                                ByVal cpg As Double, ByVal lidx As Integer) As Variant
+    Dim tCP() As Double
     Dim cnt As Integer
     
     If lidx < 2 Then
@@ -517,29 +542,40 @@ Public Function getPotentialTCP(ByRef mon As Monster, ByRef enemy As Monster, _
     Call calcMonPowers(mon)
     '   mTCPの計算
     '   わざ変
-    ReDim TCP(2)
+    ReDim tCP(2)
     cnt = 1
     mon.atkIndex(0).selected = mon.atkIndex(0).lower
     mon.atkIndex(1).selected = mon.atkIndex(1).lower
     Call calcChargeCount(mon)
-    TCP(0) = calcTCP(mon, enemy)
+    tCP(0) = calcTCP(mon, enemy)
     If mon.atkIndex(0).lower + 1 <= mon.atkIndex(0).upper Then
         cnt = 2
         '   手持ちわざ
         mon.atkIndex(0).selected = mon.atkIndex(0).lower + 1
         mon.atkIndex(1).selected = mon.atkIndex(1).lower + 1
         Call calcChargeCount(mon)
-        TCP(1) = calcTCP(mon, enemy)
+        tCP(1) = calcTCP(mon, enemy)
         If mon.atkIndex(1).lower + 2 <= mon.atkIndex(1).upper Then
             mon.atkIndex(1).selected = mon.atkIndex(1).lower + 2
             Call calcChargeCount(mon)
-            TCP(2) = calcTCP(mon, enemy)
-            If TCP(2) > TCP(1) Then TCP(1) = TCP(2)
+            tCP(2) = calcTCP(mon, enemy)
+            If tCP(2) > tCP(1) Then tCP(1) = tCP(2)
         End If
     End If
-    ReDim Preserve TCP(cnt - 1)
-    getPotentialTCP = TCP
+    ReDim Preserve tCP(cnt - 1)
+    getPotentialTCP = tCP
 End Function
+
+'   進化先が書き換わった
+Private Sub changeEvolveTo(ByVal target As Range)
+    Dim self As Monster
+    Dim enemy As Monster
+    
+    If Not getIndividual(target, self) Then Exit Sub
+    Call getMonsterByPower(enemy)   '   ダミー値
+    Call calcMonPowers(self)
+    Call setPotential(target, self, enemy)
+End Sub
 
 '   標準の並べ替え
 Public Sub sortNormally()
@@ -605,6 +641,7 @@ Private Function getInputRange() As Range
             Set datar = Range(.cells(1, 1), .cells(.rows.count, col))
         End With
         Set getInputRange = Union(datar, _
+                    .ListColumns(IND_EvolveTo).DataBodyRange, _
                     .ListColumns(IND_TargetPL).DataBodyRange, _
                     .ListColumns(IND_TargetNormalAtk).DataBodyRange, _
                     .ListColumns(IND_TargetSpecialAtk).DataBodyRange)
@@ -676,7 +713,7 @@ End Function
 
 '   リーグ別目標PLの設定
 Public Sub setTargetPL(ByVal rng As Range)
-    Dim row, col, TCP As Long
+    Dim row, col, tCP As Long
     Dim cols, attr As Variant
     Dim rrow(1) As Long
     With shIndividual.ListObjects(1)
@@ -729,7 +766,7 @@ Public Function SetAutoTargetPL(Optional ByVal genType As String = "", _
                             Optional ByVal level As Double = C_MaxPL) As Integer
     Dim atRng As Range
     Dim league As Integer
-    Dim TCP As Long
+    Dim tCP As Long
     Dim cols As Variant
     Dim cel As Range
     Dim tPL As Double
@@ -742,23 +779,23 @@ Public Function SetAutoTargetPL(Optional ByVal genType As String = "", _
             atRng.value = level
         Case C_League1
             league = 1
-            TCP = C_UpperCPl1
+            tCP = C_UpperCPl1
         Case C_League2
             league = 2
-            TCP = C_UpperCPl2
+            tCP = C_UpperCPl2
         Case C_League3
             league = 3
             atRng.value = level
     End Select
     If league = 0 Then Exit Function
-    If TCP > 0 Then
+    If tCP > 0 Then
         atRng.ClearContents
         cols = Array(IND_CP, IND_PL, _
                 IND_AtkPower, IND_DefPower, IND_HP2)
         For Each cel In atRng
             attr = getRowValues(cel, cols)
             If attr(1) > 0 Then
-                tPL = getPLbyCP(TCP, attr(1), attr(2), attr(3), attr(4))
+                tPL = getPLbyCP(tCP, attr(1), attr(2), attr(3), attr(4))
                 If attr(1) <= tPL Then cel.value = tPL
             End If
         Next

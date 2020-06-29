@@ -15,9 +15,7 @@ Const cdps_ranks As Long = 5
 '   シートアクティブ
 '   コンボボックスの設定
 Private Sub Worksheet_Activate()
-    Call setComboMenu(cmbJump, Array( _
-            shSpecies, shNormalAttack, shSpecialAttack, shSpeciesMap), _
-            Nothing, Array(cmdFilterReset, cmdSortReset))
+    Call setComboMenuOfSpeciesTable(Me, cmbJump)
 End Sub
 
 '   移動コンボボックスの変更
@@ -47,13 +45,15 @@ Public Sub addNewSpecies(Optional ByVal withLimitedAtk As Boolean = True)
         Loop
     End With
     '   種族マップ
-    Call shSpeciesMap.MakeSpeciesMap
+    Call shSpeciesMap.MakeMap
     Call doMacro
 End Sub
 
 '   コントロールのクリア
 Public Sub clearControls()
     chkSameType.value = False
+    Call resetTableFilter(Me)
+    Call sortNormally
 End Sub
 
 '   表を作り直す（時間が掛かる）
@@ -69,7 +69,7 @@ Public Sub makeTableSpeciesAna1( _
     Call makeAtkAna(C_IdMtc, cdps_ranks, 0, withLimitedAtk)
     Call makeLeagueIVRank
     '   種族マップ
-    Call shSpeciesMap.MakeSpeciesMap
+    Call shSpeciesMap.MakeMap
     Call doMacro
 End Sub
 
@@ -380,19 +380,22 @@ End Sub
 
 '   リーグ別おすすめ個体値の作成
 Private Sub makeLeagueIVRank(Optional ByVal srow As Long = 0, _
-                            Optional ByVal rnkNum As Integer = 30, _
-                            Optional ByVal lrnkNum As Integer = 10)
-    Dim rowr, cols, attr, TCP, rnks As Variant
+                            Optional ByVal rnkNum As Integer = 50, _
+                            Optional ByVal lrnkNum As Integer = 20)
+    Dim rowr, cols, attr, tCP, rnks As Variant
     Dim i, j As Integer
     Dim species, str As String
     Dim mon As Monster
+    Dim enemy As Monster
+    Dim cdpss As CDpsSet
     
     rowr = getRowRange(srow)
     cols = getColumnIndexes(shSpeciesAnalysis1, _
             Array(SA1_ReccIV & "1", SA1_ReccIV & "2", SA1_ReccIV & "3", _
             SA1_Name, _
             SA1_CDST_NormalAtkName & "1", SA1_CDST_SpecialAtkName & "1"))
-    TCP = Array(C_UpperCPl1, C_UpperCPl2, 0)
+    tCP = Array(C_UpperCPl1, C_UpperCPl2, 0)
+    Call getMonsterByPower(enemy)
     '   各行ループ
     With ListObjects(1).DataBodyRange
         For row = rowr(0) To rowr(1)
@@ -407,15 +410,22 @@ Private Sub makeLeagueIVRank(Optional ByVal srow As Long = 0, _
             For i = 2 To 0 Step -1
                 With .cells(row, cols(i))
                     Range(.Offset(0, 0), .Offset(0, 3)).ClearContents
-                    rnks = getFitIndiv(mon, TCP(i), rnkNum, lrnkNum)
+                    rnks = getFitIndiv(mon, tCP(i), rnkNum, lrnkNum)
                     If IsArray(rnks) Then
-                        .value = getIvStr(rnks(0))
+                        .value = getIvStr(rnks(0), rnks(2)(3))
                         If rnks(0)(0)(0) < 15 Or rnks(0)(0)(1) < 15 Or rnks(0)(0)(2) < 15 Then
-                            .Offset(0, 1).value = getIvStr(rnks(1))
+                            .Offset(0, 1).value = getIvStr(rnks(1), rnks(2)(3))
                         End If
-                        .Offset(0, 2).value = rnks(0)(0)(3)
-                        .Offset(0, 3).value = rnks(2)(3)
+                        .Offset(0, 2).value = rnks(0)(0)(3) '   mTCP
+                        .Offset(0, 3).value = rnks(2)(3)    '   mTCP(min)
                         Range(.Offset(0, 0), .Offset(0, 1)).WrapText = False
+                        '   最大個体を再現
+'                        mon.PL = rnks(0)(0)(5): mon.indATK = rnks(0)(0)(0)
+'                        mon.indDEF = rnks(0)(0)(1): mon.indHP = rnks(0)(0)(2)
+'                        Call calcMonPowers(mon)
+'                        cdpss = calcCDPS(mon, enemy, True)
+'                        .Offset(0, 4).value = cdpss.cDPS
+'                        .Offset(0, 5).value = getEndurance(mon.defPower, mon.hpPower)
                     End If
                 End With
             Next
@@ -423,17 +433,26 @@ Private Sub makeLeagueIVRank(Optional ByVal srow As Long = 0, _
     End With
 End Sub
 
-Private Function getIvStr(ByRef rnk As Variant) As String
-    Dim i, drv, cur As Long
+'   個体値ランク配列を文字列にする
+Private Function getIvStr(ByRef rnk As Variant, ByVal min As Double) As String
+    Dim i, drv As Long
+    Dim ratio, width, curr As Double
 '    If Not IsArray(rnk) Then Exit Function
+    width = rnk(0)(3) - min
+    curr = 0.95
     For i = 0 To UBound(rnk)
-        drv = Fix(rnk(i)(3))
-        If drv = 0 Then Exit For
-        If cur <> drv Then
+'        drv = rnk(i)(3)
+        ratio = (rnk(i)(3) - min) / width
+        If ratio <= 0 Then Exit For
+        If curr >= ratio Then
             If getIvStr <> "" Then getIvStr = getIvStr & vbCrLf
 '            getIvStr = getIvStr & drv & ": "
-            cur = drv
+            curr = curr - 0.05
         End If
         getIvStr = getIvStr & Hex(rnk(i)(0)) & Hex(rnk(i)(1)) & Hex(rnk(i)(2)) & ", "
     Next
+End Function
+
+Public Function getAtkRankingNum() As Integer
+    getAtkRankingNum = cdps_ranks
 End Function

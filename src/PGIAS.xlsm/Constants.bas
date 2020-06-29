@@ -24,6 +24,7 @@ Public Const C_Up = "↑"
 Public Const C_Down = "↓"
 Public Const C_AutoTarget = "自動目標"
 Public Const C_None = "なし"
+Public Const C_League = "リーグ"
 Public Const C_League1 = "スーパーリーグ"
 Public Const C_League2 = "ハイパーリーグ"
 Public Const C_League3 = "マスターリーグ"
@@ -35,6 +36,8 @@ Public Const C_XPrediction = "X軸予測"
 Public Const C_YPrediction = "Y軸予測"
 Public Const C_CpUpper = "CP上限"
 Public Const C_PrCpLower = "予測CP下限"
+Public Const C_LeagueSelection = "リーグ選択"
+Public Const C_SheetName = "シート名"
 
 Public Const C_Weather As String = "天候"
 Public Const C_Current As String = "現在"
@@ -53,6 +56,7 @@ Public Const C_NotSet As String = "未設定"
 Public Const C_DummyNormalAttack As String = "ダミー通常わざ"
 Public Const C_DummySpecialAttack As String = "ダミーゲージわざ"
 Public Const C_Map As String = "マップ"
+Public Const C_Normal As String = "ノーマル"
 
 Public Const cmdClear As String = "クリア"
 Public Const cmdRemove As String = "削除"
@@ -93,6 +97,7 @@ Public Const IND_gTCP As String = "gTCP"
 Public Const IND_mTCP As String = "mTCP"
 
 Public Const IND_Potential = "潜在値_l"
+Public Const IND_EvolveTo = "進化先_l"
 Public Const IND_ptPL = "PL_l"
 Public Const IND_ptCP = "CP_l"
 Public Const IND_ptTCP = "mTCP_1l"
@@ -210,7 +215,6 @@ Public Const SPEC_SpecialAttackLimited As String = "限定" & C_SpecialAttack
 Public Const SPEC_EvolvedFrom As String = "進化元"
 Public Const SPEC_EvolvedTo As String = "進化先"
 
-
 '   わざ
 Public Const ATK_Name As String = "わざ名"
 Public Const ATK_Type As String = C_Type
@@ -317,16 +321,57 @@ Public Const SA1_ReccIV As String = "個体値_l"
 Public Const SA1_ReccIVlim As String = "(たまご)_l"
 Public Const SA1_ReccTCP As String = "mTCP_l"
 Public Const SA1_ReccTCPmin As String = "(min)_TCPl"
+'Public Const SA1_ReccCDPT As String = "cDPT_l"
+'Public Const SA1_ReccEndurance As String = "耐久力_l"
 
 Public Const SA1_LastColumn As String = SA1_ReccTCPmin
 
 Public Const R_NormalAtkSpeciesSelect As String = "通常わざ種族選択"
 Public Const R_SpecialAtkSpeciesSelect As String = "ゲージわざ種族選択"
 
+'   リーグ別
+Public Const SBL_R_Settings As String = "種族L設定"
+Public Const SBL_R_FilterIndicator As String = "種族Lフィルタ"
+Public Const SBL_Number As String = "番号"
+Public Const SBL_Species As String = C_SpeciesName
+Public Const SBL_Type As String = "タイプ"
+Public Const SBL_PL As String = "PL"
+Public Const SBL_indATK As String = "ATK_ind"
+Public Const SBL_indDEF As String = "DEF_ind"
+Public Const SBL_indHP As String = "HP_ind"
+Public Const SBL_NormalAtk As String = C_NormalAttack
+Public Const SBL_SpecialAtk1 As String = C_SpecialAttack & "1"
+Public Const SBL_SpecialAtk2 As String = C_SpecialAttack & "2"
+Public Const SBL_CP As String = "CP"
+Public Const SBL_HP As String = "HP"
+Public Const SBL_AtkPower As String = "攻撃力"
+Public Const SBL_DefPower As String = "防御力"
+Public Const SBL_HP2 As String = "HP2"
+Public Const SBL_SCP As String = "SCP"
+Public Const SBL_DCP As String = "DCP"
+Public Const SBL_Endurance As String = "耐久力"
+Public Const SBL_gTCP As String = "gTCP"
+Public Const SBL_mTCP As String = "mTCP"
+Public Const SBL_MtcNormalAtkDamage As String = "ダメージ_mn"
+Public Const SBL_MtcNormalAtkTDPS As String = "tDPT_mn"
+Public Const SBL_MtcNormalAtkEPT As String = "EPT_mn"
+Public Const SBL_MtcSpecialAtkDamage As String = "ダメージ_ms"
+Public Const SBL_MtcSpecialAtkDPE As String = "DPE_ms"
+Public Const SBL_MtcSpecialAtkCDPS As String = "cDPT_ms"
+Public Const SBL_MtcSpecialAtkCycle As String = "Cyc_ms"
+Public Const SBL_FilterNormalAtk As String = "_flNatk"
+Public Const SBL_FilterSpecialAtk As String = "_flSatk"
+
 '   種族マップ
+Public Const SMAP_C_Title As String = "種族マップ"
 Public Const R_SpeciesMapTypeSelect As String = "種族マップタイプ選択"
 Public Const R_SpeciesMapSpeciesSelect As String = "種族マップ種族選択"
 Public Const R_SpeciesMapSettings As String = "種族マップ設定"
+Public Const SMAP_R_Table As String = "種族マップ元表"
+Public Const SMAP_R_TypeSelect As String = "種族マップタイプ選択"
+Public Const SMAP_R_SpeciesSelect As String = "種族マップ種族選択"
+Public Const SMAP_R_Settings As String = "種族マップ設定"
+Public Const SMAP_R_MakingTime As String = "種族マップ作成時間"
 
 '   対策ランク
 Public Const CR_Weather As String = C_Weather

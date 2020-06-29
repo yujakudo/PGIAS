@@ -34,16 +34,15 @@ Const msgSetLabelsHorizontally As String = "ラベル位置の調整（横方向）"
 Const msgSetLabelsVertically As String = "ラベル位置の調整（縦方向）"
 Const msgSetAlignment As String = "文字寄せ"
 
-'   マップ設定の変更
-Public Function onChangeMapSettings(ByVal Target As Range, _
-                ByVal rng As Variant) As Boolean
+'   個体マップ設定の変更
+Public Function onChangeIndMapSettings(ByVal target As Range, _
+                ByVal rng As Range) As Boolean
     Dim key As String
-    onChangeMapSettings = False
-    If Not IsObject(rng) Then Set rng = Range(rng)
-    key = Target.Offset(-1, 0).text
-    If key = C_AutoTarget Then
-        Call setSettings(rng, getAutoTargetSettings(Target.text))
-        onChangeMapSettings = True
+    onChangeIndMapSettings = False
+    key = target.Offset(-1, 0).text
+    If key = C_AutoTarget Then  '   自動ターゲット
+        Call setSettings(rng, getAutoTargetSettings(target.text))
+        onChangeIndMapSettings = True
     End If
 End Function
 
@@ -94,7 +93,7 @@ Public Function getTypesFromRange(ByVal rng As Variant) As Variant
 End Function
 
 '   タイプ選択・種族選択のセルの変更
-Sub CheckEmpasis(ByVal Target As Range, ByRef cho As ChartObject, _
+Sub CheckEmpasis(ByVal target As Range, ByRef cho As ChartObject, _
                 ByVal typeCell As String, ByVal empasisCell As String, _
                 Optional showArrow As Boolean = True)
     Dim stype(), emph, species As String
@@ -102,7 +101,7 @@ Sub CheckEmpasis(ByVal Target As Range, ByRef cho As ChartObject, _
     Dim cel, rng As Range
     '   変更セルが、タイプ・強調・種族選択セルでなかったら終了
     Set rng = Union(Range(typeCell), Range(empasisCell))
-    If Application.Intersect(Target, rng) Is Nothing Then Exit Sub
+    If Application.Intersect(target, rng) Is Nothing Then Exit Sub
     '   タイプを配列で得る
     i = 0
     If typeCell <> "" Then
@@ -756,19 +755,28 @@ End Sub
 '   列インデックスの配列を取得する
 '   (0)は引数の列インデックス、(1)はX軸の現在と予測、(2)はY軸の現在と予測
 Private Function getAxisColIndex(ByRef settings As Object, _
-                                ByVal paramCol As Variant)
+                                ByVal paramCol As Variant, _
+                                ByRef lo As ListObject)
     Dim colSet, colRet, colNames As Variant
     Dim colName As String
     Dim xy, np, i As Integer
-    Dim lo As ListObject
     Dim colIdx() As Long
     
-    Set lo = shIndividual.ListObjects(1)
-    colSet = Array( _
-        Array(settings(C_XAxis), settings(C_XPrediction)), _
-        Array(settings(C_YAxis), settings(C_YPrediction)) _
-    )
-    colRet = Array(Array(), Array(Array(), Array()), Array(Array(), Array()))
+    If settings.exists(C_XPrediction) Then
+        '   個体マップ。予測あり
+        colSet = Array( _
+            Array(settings(C_XAxis), settings(C_XPrediction)), _
+            Array(settings(C_YAxis), settings(C_YPrediction)) _
+        )
+        colRet = Array(Array(), Array(Array(), Array()), Array(Array(), Array()))
+    Else
+        '   種族マップ。予測なし
+        colSet = Array( _
+            Array(settings(C_XAxis)), _
+            Array(settings(C_YAxis)) _
+        )
+    colRet = Array(Array(), Array(Array()), Array(Array()))
+    End If
     ReDim colIdx(UBound(paramCol))
     For i = 0 To UBound(paramCol)
         colIdx(i) = getColumnIndex(paramCol(i), lo)
@@ -776,7 +784,7 @@ Private Function getAxisColIndex(ByRef settings As Object, _
     
     colRet(0) = colIdx
     For xy = 1 To 2
-        For np = 0 To 1
+        For np = 0 To UBound(colSet(xy - 1))
             colName = colSet(xy - 1)(np)
             If InStr(colName, "*") < 1 Then
                 colRet(xy)(np) = getColumnIndex(colName, lo)
@@ -831,59 +839,44 @@ End Sub
 '   元表を作る
 Public Sub makeOrgTable(ByRef rng As Range, _
                         ByRef settings As Object)
-    Dim srow, i As Long
+    Dim row, i As Long
     Dim celMap1, celMap As Range
     Dim limCP, colIdx, val, mval As Variant
-'    Dim addr, maddr As Variant
-    Dim xy, np As Integer
+    Dim lo As ListObject
     
     rng.value = ""
     Set celMap1 = rng.cells(1, 1).Offset(-1, 0)
+    Set lo = shIndividual.ListObjects(1)
     colIdx = getAxisColIndex(settings, _
-            Array(IND_Nickname, IND_Species, IND_PL, IND_prPL, IND_CP, IND_prCP))
+            Array(IND_Nickname, IND_Species, IND_PL, IND_prPL, IND_CP, IND_prCP), _
+            lo)
     '   CP限定値
     limCP = Array(settings(C_CpUpper), settings(C_PrCpLower))
     If limCP(0) = 0 Then limCP(0) = C_MaxLong
     If limCP(1) = 0 Then limCP(1) = 0
-    With shIndividual
-        srow = .ListObjects(1).DataBodyRange.row
-        Set celMap = celMap1
-        While .cells(srow, 1).text <> ""
-            '   列インデックスにあたる値とアドレスの取得
-'            Call getValAndAddr(srow, colIdx, val, addr)
-            val = getValueRecursive(srow, colIdx)
-            If IsError(val(0)(5)) Then val(0)(5) = 0
-            If val(0)(0) = "" Or val(0)(2) = 0 _
-                Or val(0)(4) > limCP(0) _
-                Or (val(0)(5) > 0 And val(0)(5) < limCP(1)) Then
-                GoTo Continue
-            End If
-            '   XY軸、現在・予測の下の値が配列なら、最大値取得
-            For xy = 1 To 2
-                For np = 0 To 1
-                    If IsArray(val(xy)(np)) Then
-                        mval = 0: maddr = ""
-                        For i = 0 To UBound(val(xy)(np))
-                            If i = 0 Or (val(xy)(np)(i) <> "" And mval < val(xy)(np)(i)) Then
-                                mval = val(xy)(np)(i)
- '                               maddr = addr(xy)(np)(i)
-                            End If
-                        Next
-                        val(xy)(np) = mval
-'                        addr(xy)(np) = maddr
-                    End If
-                Next
-            Next
-            '   現在値の書き込み
-            Set celMap = celMap.Offset(1, 0)
-            With celMap
-                .value = val(0)(0) & " l." & val(0)(2)
-                .Offset(0, 1).value = val(0)(1)
-                .Offset(0, 2).value = val(1)(0)
-                .Offset(0, 3).value = val(2)(0)
-                .Offset(0, 4).value = 0
-            End With
-            '   あれば予測値の書き込み
+    Set celMap = celMap1
+    For row = 1 To lo.DataBodyRange.rows.count
+        '   列インデックスにあたる値とアドレスの取得
+        val = getValueRecursive(row, colIdx, lo)
+        If IsError(val(0)(5)) Then val(0)(5) = 0
+        If val(0)(0) = "" Or val(0)(2) = 0 _
+            Or val(0)(4) > limCP(0) _
+            Or (val(0)(5) > 0 And val(0)(5) < limCP(1)) Then
+            GoTo Continue
+        End If
+        '   XY軸、現在・予測の下の値が配列なら、最大値取得
+        Call selectLargeValue(val)
+        '   現在値の書き込み
+        Set celMap = celMap.Offset(1, 0)
+        With celMap
+            .value = val(0)(0) & " l." & val(0)(2)
+            .Offset(0, 1).value = val(0)(1)
+            .Offset(0, 2).value = val(1)(0)
+            .Offset(0, 3).value = val(2)(0)
+            .Offset(0, 4).value = 0
+        End With
+        '   あれば予測値の書き込み
+        If UBound(val(1)) > 0 Then
             If val(1)(1) <> "" And val(2)(1) <> "" And val(0)(5) <= limCP(0) Then
                 Set celMap = celMap.Offset(1, 0)
                 With celMap
@@ -894,13 +887,11 @@ Public Sub makeOrgTable(ByRef rng As Range, _
                     .Offset(0, 4).value = 1
                 End With
             End If
+        End If
 Continue:
-            srow = srow + 1
-        Wend
-    End With
+    Next
     Set rng = Range(celMap1.Offset(1, 0), celMap.Offset(0, 4))
 End Sub
-
 
 '   再入してツリー構造の列インデックスより値とアドレスを取得
 Private Sub getValAndAddr(ByVal row As Long, ByRef colIdx As Variant, _
@@ -924,17 +915,137 @@ Private Sub getValAndAddr(ByVal row As Long, ByRef colIdx As Variant, _
 End Sub
 
 '   再入してツリー構造の列インデックスより値を取得
-Private Function getValueRecursive(ByVal row As Long, ByRef colIdx As Variant) As Variant
+Private Function getValueRecursive(ByVal row As Long, ByRef colIdx As Variant, _
+                                ByRef lo As ListObject) As Variant
     Dim arrVal() As Variant
     Dim lim As Long
     If IsArray(colIdx) Then
         lim = UBound(colIdx)
         ReDim arrVal(lim)
         For i = 0 To lim
-            arrVal(i) = getValueRecursive(row, colIdx(i))
+            arrVal(i) = getValueRecursive(row, colIdx(i), lo)
         Next
         getValueRecursive = arrVal
     Else
-        getValueRecursive = shIndividual.cells(row, colIdx).value
+        getValueRecursive = lo.DataBodyRange.cells(row, colIdx).value
     End If
 End Function
+
+'   XY軸、現在・予測の下の値が配列なら、最大値取得
+Private Sub selectLargeValue(ByRef val As Variant)
+    Dim xy, np As Integer
+    Dim mval As Double
+    For xy = 1 To 2
+        For np = 0 To UBound(val(xy))
+            If IsArray(val(xy)(np)) Then
+                mval = 0
+                For i = 0 To UBound(val(xy)(np))
+                    If i = 0 Or (val(xy)(np)(i) <> "" And mval < val(xy)(np)(i)) Then
+                        mval = val(xy)(np)(i)
+                    End If
+                Next
+                val(xy)(np) = mval
+            End If
+        Next
+    Next
+End Sub
+'   種族マップを作る
+Public Sub makeSpeciesMap(ByRef rngTbl As Range, _
+                        ByRef settings As Object)
+    Dim cho As ChartObject
+    Dim league As Integer
+    Dim stime As Double
+    Dim title As String
+    Dim shOrg As Worksheet
+    Dim orgSettings As Object
+    
+    stime = Timer
+    Call doMacro(msgstr(msgMaking, rngTbl.Parent.name))
+    '   フィルターとソート
+    Call resetTableFilter(shSpeciesAnalysis1)
+    Call shSpeciesAnalysis1.sortNormally
+    Call copySpeciesTable(rngTbl, settings)
+    Set cho = rngTbl.Parent.ChartObjects(1)
+    With rngTbl
+        Call SetSourceData(cho, Range( _
+            .cells(1, 2), .cells(.rows.count, 3)))
+    End With
+    With rngTbl.Offset(-1, 0)
+        Call setMarkerLabels(cho, _
+            .cells(1, 1), Nothing, Nothing, settings(C_LabelAlign))
+    End With
+    Call setAxisLabel(cho, settings(C_XAxis), settings(C_YAxis))
+    '   タイトル設定
+    Set shOrg = Worksheets(settings(C_SheetName))
+    If checkNameInSheet(shOrg, SBL_R_Settings) Then
+        Set orgSettings = getSettings(shOrg.Range(SBL_R_Settings))
+        title = SMAP_C_Title & " - " & orgSettings(C_League)
+    Else
+        title = SMAP_C_Title
+    End If
+    cho.Chart.ChartTitle.text = title
+    Call setTimeAndDate(rngTbl.Parent.Range(SMAP_R_MakingTime), stime)
+    Call doMacro
+End Sub
+
+'   元表を作る
+Public Sub copySpeciesTable(ByRef rng As Range, _
+                        ByRef settings As Object)
+    Dim row, i As Long
+    Dim celMap1, celMap As Range
+    Dim colIdx, val As Variant
+    Dim lo As ListObject
+    
+    Set lo = Worksheets(settings(C_SheetName)).ListObjects(1)
+    rng.ClearContents
+    Set celMap1 = rng.cells(1, 1).Offset(-1, 0)
+    colIdx = getAxisColIndex(settings, Array(C_SpeciesName), lo)
+    Set celMap = celMap1
+    For row = 1 To lo.DataBodyRange.rows.count
+        val = getValueRecursive(row, colIdx, lo)
+        If val(0)(0) <> "" Then
+            Call selectLargeValue(val)
+            Set celMap = celMap.Offset(1, 0)
+            celMap.value = val(0)(0)   '   種族名
+            celMap.Offset(0, 1).value = val(1)(0)
+            celMap.Offset(0, 2).value = val(2)(0)
+        End If
+    Next
+    Set rng = Range(celMap1.Offset(1, 0), celMap.Offset(0, 3))
+End Sub
+
+'   種族マップ設定の変更
+Public Function onChangeSpecMapSettings(ByVal target As Range, _
+                ByVal rng As Range) As Boolean
+    Dim key As String
+    onChangeSpcMapSettings = False
+    key = target.Offset(-1, 0).text
+    If key = C_SheetName Then  '   シート名
+        Call initSpecMapSettings(rng.Parent, target.text)
+        onChangeSpcMapSettings = True
+    End If
+End Function
+
+'   設定初期化
+Public Sub initSpecMapSettings(ByRef sh As Worksheet, _
+                    Optional ByVal shName As String = "")
+    Dim settings As Object
+    Dim curSettings As Object
+    
+    Call doMacro(msgstr(msgInitializing, sh.name))
+    Set settings = CreateObject("Scripting.Dictionary")
+    If shName = "" Then shName = shSpeciesAnalysis1.name
+    settings.item(C_SheetName) = shName
+    If shName = shSpeciesAnalysis1.name Then
+        settings.item(C_XAxis) = SA1_Endurance
+        settings.item(C_YAxis) = SA1_CDSP_Value & "1"
+        settings.item(C_LabelAlign) = 20
+    Else
+        settings.item(C_XAxis) = SA1_Endurance
+        settings.item(C_YAxis) = SBL_MtcSpecialAtkCDPS & "*"
+        settings.item(C_LabelAlign) = 20
+    End If
+    Call setSettings(sh.Range(SMAP_R_Settings), settings)
+    Call doMacro
+End Sub
+

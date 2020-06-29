@@ -8,72 +8,90 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 
-'   リセットボタン
-Private Sub btnChartReset_Click()
+'   入力項目をクリアする
+Private Sub clearInputs(Optional ByRef rngTbl As Range = Nothing)
+    Dim prev As Boolean
+    prev = Application.EnableEvents
+    Application.EnableEvents = False
+    Range(SMAP_R_TypeSelect).value = ""
+    Range(SMAP_R_SpeciesSelect).value = ""
+    If Not rngTbl Is Nothing Then
+        Me.names(SMAP_R_Table).RefersTo = "='" & Me.name & "'!" & rngTbl.Address
+    End If
+    Application.EnableEvents = prev
+End Sub
+
+'   マップを作るボタン
+Private Sub btnMakeMap_Click()
+    Call MakeMap
+End Sub
+
+Public Sub MakeMap()
+    Dim settings As Object
+    Dim rngTbl As Range
+    
+    Set settings = getSettings(Range(SMAP_R_Settings))
+    Set rngTbl = Range(SMAP_R_Table)
+    Call makeSpeciesMap(rngTbl, settings)
+    Call clearInputs(rngTbl)
+End Sub
+
+'   リセット
+Private Sub btnReset_Click()
     Call doMacro(msgstr(msgReseting, name))
-    Call clearInputs
     Call setMarker(ChartObjects(1))
     Call doMacro
+    Call clearInputs
 End Sub
 
-'   入力項目をクリアする
-Private Sub clearInputs()
-    Range(R_SpeciesMapTypeSelect).value = ""
-    Range(R_SpeciesMapSpeciesSelect).value = ""
+'   シートアクティブ。
+Private Sub Worksheet_Activate()
+    Dim shs As Variant
+    Dim str As String
+    shs = getSheetsByName(SBL_R_Settings)
+    str = shSpeciesAnalysis1.name
+    For i = 0 To UBound(shs)
+        str = str & "," & shs(i).name
+    Next
+    With Range(R_SpeciesMapSettings).cells(2, 1)
+        .Validation.Delete
+        .Validation.Add Type:=xlValidateList, Formula1:=str
+    End With
 End Sub
 
-'   マップの初期化ボタン
-Private Sub btnMarkerColor_Click()
-    Call doMacro(msgstr(msgMaking, name))
-    Call MakeSpeciesMap
-    Call doMacro
-End Sub
-
-'   タイプ選択・種族選択のセルの変更
-Private Sub Worksheet_Change(ByVal Target As Range)
+'   シートの変更
+Private Sub Worksheet_Change(ByVal target As Range)
     Dim stype As Variant
-    Dim rngType, rngSelect As Range
+    Dim rngType, rngSelect, rngSetting As Range
     
-    Set rngType = Range(R_SpeciesMapTypeSelect)
-    Set rngSelect = Range(R_SpeciesMapSpeciesSelect)
-    '   タイプ選択・個体選択のセルの変更
-    If Not Application.Intersect(Target, Union(rngType, rngSelect)) _
+    Set rngType = Range(SMAP_R_TypeSelect)
+    Set rngSelect = Range(SMAP_R_SpeciesSelect)
+    Set rngSetting = Range(SMAP_R_Settings)
+    
+    '   タイプ選択・種族選択のセルの変更
+    If Not Application.Intersect(target, Union(rngType, rngSelect)) _
                                         Is Nothing Then
         Call doMacro(msgSettingMap)
-        '   タイプ、個体選択を渡してマーカー設定
+        '   タイプ、種族選択を渡してマーカー設定
         stype = getTypesFromRange(rngType)
         Call setMarker(ChartObjects(1), stype, rngSelect.text)
         Call doMacro
+    '   設定の変更
+    ElseIf target.row > 1 And Not Application.Intersect(target, rngSetting) Is Nothing Then
+        Call onChangeSpecMapSettings(target, rngSetting)
     End If
 End Sub
 
-
-'   種族マップのリセット
-Public Sub ResetSpeciesMap()
-    Call btnChartReset_Click
-End Sub
-
-'   マップの作成
-Public Sub MakeSpeciesMap()
-    Dim cho As ChartObject
-    Dim col(2) As Long
-    Dim src As Range
-    Dim settings As Object
-    
-    Set settings = getSettings(R_SpeciesMapSettings)
+'   マップをすべてクリア
+Public Sub ClearMap()
+    Call DeleteSourceData(ChartObjects(1))
     Call clearInputs
-    '   データ列の作成
-    Call shSpeciesAnalysis1.sortNormally
-    With shSpeciesAnalysis1.ListObjects(1)
-        Set src = Union( _
-            .ListColumns(settings(C_XAxis)).DataBodyRange, _
-            .ListColumns(settings(C_YAxis)).DataBodyRange)
-    End With
-    Set cho = ChartObjects(1)
-    Call SetSourceData(cho, src)
-    Call setMarkerLabels(cho, shSpecies.cells(1, 2), _
-                        Nothing, Nothing, settings(C_LabelAlign))
-    Call setAxisLabel(cho, settings(C_XAxis), settings(C_YAxis))
+    Range(SMAP_R_Table).ClearContents
+    Range(SMAP_R_MakingTime).ClearContents
 End Sub
 
-
+'   すべて初期化
+Public Sub initSheet()
+    Call initSpecMapSettings(Me, shSpeciesAnalysis1.name)
+    Call MakeMap
+End Sub

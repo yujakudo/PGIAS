@@ -1,0 +1,95 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "shSpeciesByLeague"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+
+'   シートアクティブ
+'   コンボボックスの設定
+Private Sub Worksheet_Activate()
+    Call setComboMenuOfSpeciesTable(Me, cmbJump)
+End Sub
+
+'   移動コンボボックスの変更
+Private Sub cmbJump_Change()
+    Call execCombCommand(Me, cmbJump, chkSameType.value, _
+                        Range(SBL_R_FilterIndicator))
+End Sub
+
+'   作成ボタンのクリック
+Private Sub btnCopy_Click()
+    Call sblMakeTable(Me)
+End Sub
+
+'   セルの選択
+Private Sub Worksheet_SelectionChange(ByVal target As Range)
+    Dim tcol As String
+    '   複数セル選択か、テーブルデータの選択でないなら終了
+    If target.CountLarge <> 1 Or _
+        Application.Intersect(target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
+    Call setInputList   '   前の入力規則のクリア
+    tcol = ListObjects(1).HeaderRowRange.cells(1, target.column).text
+    '   わざ
+    If tcol = SBL_NormalAtk Or tcol = SBL_SpecialAtk1 _
+            Or tcol = SBL_SpecialAtk2 Then
+        Call AtkSelected(target)
+    End If
+End Sub
+
+'   セル値の変更
+Private Sub Worksheet_Change(ByVal target As Range)
+    Dim tcol As String
+    Dim rngSetting As Range
+    
+    Set rngSetting = Range(SBL_R_Settings)
+    If target.row > 1 And Not Application.Intersect(target, rngSetting) Is Nothing Then
+'        Call sblChangeSettings(target, rngSetting)
+        Exit Sub
+    End If
+    If Not Application.Intersect(target, Range(SBL_R_FilterIndicator)) Is Nothing Then
+        Call sblSetFilter(target)
+        Exit Sub
+    End If
+    If Application.Intersect(target, ListObjects(1).DataBodyRange) Is Nothing Then Exit Sub
+    tcol = ListObjects(1).HeaderRowRange.cells(1, target.column).text
+    '   個体値
+    If tcol = IND_indATK Or tcol = IND_indDEF Or tcol = IND_indHP Then
+        Call enableEvent(False)
+        Call decimalizeIndivValue(target)
+        Call enableEvent(True)
+        Call sblRecalcParams(target)
+    '   わざ
+    ElseIf tcol = SBL_NormalAtk Or tcol = SBL_SpecialAtk1 _
+            Or tcol = SBL_SpecialAtk2 Then
+        Call AtkChange(target)
+        Call sblRecalcParams(target)
+    End If
+End Sub
+
+'   標準の並べ替え
+Public Sub sortNormally()
+    Call sortTable(Me, Array( _
+            SBL_Number, SBL_Species))
+End Sub
+
+'   初期化
+Public Sub init()
+    Dim settings As Object
+    Set settings = CreateObject("Scripting.Dictionary")
+    settings.item(C_League) = C_League1
+    settings.item(SBL_AtkPower) = 100
+    settings.item(SBL_DefPower) = 100
+    settings.item(SBL_HP2) = 100
+    Call doMacro(msgstr(msgInitializing, Me.name))
+    Call setSettings(Range(SBL_R_Settings), settings)
+    Range(SBL_R_FilterIndicator).ClearContents
+    Call resetTableFilter(Me)
+    Call sortNormally
+    chkSameType.value = False
+    Call doMacro
+End Sub
+

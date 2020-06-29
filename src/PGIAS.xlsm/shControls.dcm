@@ -103,7 +103,7 @@ End Sub
 
 '   種族・技シートのソート
 Public Sub SortBasicTables()
-    Call shSpecies.sortNormally
+'    Call shSpecies.sortNormally
     Call deselectSpecies
     Call sortTable(shNormalAttack, Array(ATK_Name))
     Call sortTable(shSpecialAttack, Array(ATK_Name))
@@ -141,7 +141,7 @@ End Function
 '   種族と技のデータのマージインポート
 Public Function MargeImportBasicData(Optional ByVal overwrite As Boolean = False, _
                 Optional ByVal isTest As Boolean = False)
-    Dim atkcols As Variant
+    Dim atkCols As Variant
     Dim log, sh As Variant
     Dim ln As Integer
     
@@ -155,12 +155,12 @@ Public Function MargeImportBasicData(Optional ByVal overwrite As Boolean = False
     '   テーブルのソート
     Call SortBasicTables
     '   種族シート
-    atkcols = Array(SPEC_NormalAttack, SPEC_NormalAttackLimited, _
+    atkCols = Array(SPEC_NormalAttack, SPEC_NormalAttackLimited, _
                     SPEC_SpecialAttack, SPEC_SpecialAttackLimited)
-    atkcols = getColumnIndexes(shSpecies, atkcols)
+    atkCols = getColumnIndexes(shSpecies, atkCols)
     log(ln) = margeCsv(fh, shSpecies.ListObjects(1).DataBodyRange.cells(1, 1), _
             SPEC_Name, , isTest, _
-            Array(shControls, "margeCellOfSpecies", Array(overwrite, atkcols)))
+            Array(shControls, "margeCellOfSpecies", Array(overwrite, atkCols)))
     '   通常わざ
     ln = ln + 1
     For Each sh In Array(shNormalAttack, shSpecialAttack)
@@ -278,11 +278,12 @@ Public Sub allClear(Optional ByVal comfirm As Boolean = True)
         If vbOK <> MsgBox(msgSureToAllClear, vbOKCancel) Then Exit Sub
     End If
     '   各シートの初期化関数
-    Call doMacro(msgstr(msgProcessing, Array(msgAllSheet, msgClear)))
+    Call doMacro(msgstr(msgProcessing, Array(cmdClear, msgAllSheet)))
     Call SortBasicTables                '   種族・技のソートとリセット
     Call shSpecies.clearControls        '   種族シートの操作リセット
     Call shSpeciesAnalysis1.clearControls     '   種族分析シートの操作リセット
-    Call shSpeciesMap.ResetSpeciesMap   '   種族マップのリセット
+    Call shSpeciesByLeague.init         '   種族SLシートのリセット
+    Call shSpeciesMap.initSheet         '   種族マップの初期化（再作成）
     Call shIndividual.ClearData         '   個体シートのクリア
     Call shIndividual.clearControls     '   個体シートの操作リセット
     Call shIndivMap.initSheet           '   個体マップの初期化

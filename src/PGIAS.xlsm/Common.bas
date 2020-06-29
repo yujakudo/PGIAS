@@ -603,9 +603,11 @@ Public Function msgstr(ByVal s As String, ByVal var As Variant) As String
 End Function
 
 '   名前の定義からシートの取得
-Public Function getSheetsByName(ByVal name As String)
+Public Function getSheetsByName(ByVal name As String) As Variant
     Dim sh, sheets() As Worksheet
     Dim num As Integer
+    
+    getSheetsByName = Array()
     ReDim sheets(Worksheets.count)
     For Each sh In Worksheets
         If checkNameInSheet(sh, name) Then
@@ -613,8 +615,10 @@ Public Function getSheetsByName(ByVal name As String)
             num = num + 1
         End If
     Next
-    ReDim Preserve sheets(num - 1)
-    getSheetsByName = sheets
+    If num > 0 Then
+        ReDim Preserve sheets(num - 1)
+        getSheetsByName = sheets
+    End If
 End Function
 
 Public Function checkNameInSheet(ByVal sh As Worksheet, _
@@ -626,6 +630,31 @@ Public Function checkNameInSheet(ByVal sh As Worksheet, _
     Exit Function
 Err:
     checkNameInSheet = False
+End Function
+
+'   設定の値でシート選択
+Public Function getSheetsBySettingValue(ByVal rngName As String, _
+                                        ByVal key As String, _
+                                        ByVal val As String) As Variant
+    Dim sh, sheets() As Worksheet
+    Dim settings As Object
+    Dim num As Integer
+    
+    getSheetsBySettingValue = Array()
+    ReDim sheets(Worksheets.count)
+    For Each sh In Worksheets
+        If checkNameInSheet(sh, rngName) Then
+            Set settings = getSettings(sh.Range(rngName))
+            If settings(key) = val Then
+                Set sheets(num) = sh
+                num = num + 1
+            End If
+        End If
+    Next
+    If num > 0 Then
+        ReDim Preserve sheets(num - 1)
+        getSheetsBySettingValue = sheets
+    End If
 End Function
 
 '   時間文字列の取得
@@ -781,16 +810,93 @@ Public Function joinStrList(ByVal sl As Variant, _
 End Function
 
 '   フィルター解除
-Public Sub resetTableFilter(ByVal table As Variant)
+Public Sub resetTableFilter(ByVal table As Variant, _
+                        Optional filterCol As Variant = "")
     Dim LC As ListColumn
+    Dim flCol, col As Long
+    flCol = 0
     With getListObject(table)
+        If filterCol <> "" Then
+            If IsNumeric(filterCol) Then
+                flCol = filterCol
+            Else
+                filterCol = .ListColumns(filterCol).DataBodyRange.column
+            End If
+        End If
         .Sort.SortFields.Clear
         On Error GoTo EachColumn
         .Parent.ShowAllData
+        On Error GoTo 0
+        If flCol > 0 Then .Range.AutoFilter Field:=flCol, Criteria1:="<>"
         Exit Sub
 EachColumn:
         For Each LC In .ListColumns
-            .Range.AutoFilter LC.DataBodyRange.column
+            col = LC.DataBodyRange.column
+            If col = flCol Then
+                .Range.AutoFilter Field:=col, Criteria1:="<>"
+            Else
+                .Range.AutoFilter col
+            End If
         Next
     End With
 End Sub
+
+'   配列の結合
+Public Function joinArray(ByRef a1 As Variant, ByRef a2 As Variant) As Variant
+    Dim ret() As Variant
+    Dim ni, i As Integer
+    ni = 0
+    ReDim ret(UBound(a1) + UBound(a2) + 1)
+    For i = 0 To UBound(a1)
+        If IsObject(a1(i)) Then
+            Set ret(ni) = a1(i)
+        Else
+            ret(ni) = a1(i)
+        End If
+        ni = ni + 1
+    Next
+    For i = 0 To UBound(a2)
+        If IsObject(a2(i)) Then
+            Set ret(ni) = a2(i)
+        Else
+            ret(ni) = a2(i)
+        End If
+        ni = ni + 1
+    Next
+    joinArray = ret
+End Function
+
+'   配列のコピー。特定の値を除きつつ
+'   Emptyも削除する。
+Public Function copyArray(ByRef a1 As Variant, _
+                        Optional ByVal obj As Variant = Empty) As Variant
+    Dim ret() As Variant
+    Dim ni, i As Integer
+    ni = 0
+    
+    copyArray = Array()
+    ReDim ret(UBound(a1))
+    For i = 0 To UBound(a1)
+        If Not IsEmpty(obj) Then
+            If IsObject(obj) Then
+                If obj Is a1(i) Then GoTo Continue
+            Else
+                If obj = a1(i) Then GoTo Continue
+            End If
+        End If
+        If Not IsEmpty(a1(i)) Then
+            If IsObject(a1(i)) Then
+                Set ret(ni) = a1(i)
+            Else
+                ret(ni) = a1(i)
+            End If
+            ni = ni + 1
+        End If
+Continue:
+    Next
+    If ni > 0 Then
+        ReDim Preserve ret(ni - 1)
+        copyArray = ret
+    End If
+End Function
+

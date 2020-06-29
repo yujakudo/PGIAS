@@ -31,32 +31,32 @@ Public Sub clearAllList()
 End Sub
 
 '   選択変更
-Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+Private Sub Worksheet_SelectionChange(ByVal target As Range)
     Dim lst As String
     '   コマンド名連結
     lst = LI_CMD_Clear & "," & LI_CMD_SetAsRocket
     Call setInputList
-    If Target.Address = Range(LI_R_Command).Address Then
-        Target.Validation.Delete
-        Target.Validation.Add Type:=xlValidateList, Formula1:=lst
+    If target.Address = Range(LI_R_Command).Address Then
+        target.Validation.Delete
+        target.Validation.Add Type:=xlValidateList, Formula1:=lst
     End If
 End Sub
 
 '   シートの変更
-Private Sub Worksheet_Change(ByVal Target As Range)
+Private Sub Worksheet_Change(ByVal target As Range)
     Dim tcol As String
     '   リストのタイトル（左上）の変更
-    If Target.row = 1 And Target.column < Range(LI_R_Select).column And _
-        Target.column Mod (ListObjects(1).HeaderRowRange.count + 1) = 1 Then
+    If target.row = 1 And target.column < Range(LI_R_Select).column And _
+        target.column Mod (ListObjects(1).HeaderRowRange.count + 1) = 1 Then
             Call changeTitle
             Exit Sub
     End If
-    If Target.ListObject Is Nothing Then Exit Sub
-    tcol = ListObjects(1).HeaderRowRange.cells(1, Target.column).text
+    If target.ListObject Is Nothing Then Exit Sub
+    tcol = ListObjects(1).HeaderRowRange.cells(1, target.column).text
     If tcol = LI_Species Then
-        Call speciesExpectation(Target)
+        Call speciesExpectation(target)
     ElseIf tcol = LI_HP Then
-        Call checkHPValue(Target)
+        Call checkHPValue(target)
     End If
 End Sub
 

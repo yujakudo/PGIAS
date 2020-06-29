@@ -158,12 +158,12 @@ End Function
 
 '   セルのある行にて、それ以降の文字列をカンマ区切りで結合して返す
 '   lcolが0のときは空白でストップ
-Public Function getListStr(ByVal Target As Excel.Range, ByVal lcol As Long) As String
+Public Function getListStr(ByVal target As Excel.Range, ByVal lcol As Long) As String
     Dim row, col As Long
     Dim str As String
-    With Target.Parent
-        row = Target.row
-        col = Target.column
+    With target.Parent
+        row = target.row
+        col = target.column
         Do While lcol = 0 Or col <= lcol
             str = .cells(row, col).text
             If str <> "" Then
@@ -371,15 +371,15 @@ End Function
 
 '   目標PLの取得(下のgetPLbyCPに移行)
 Public Function getTargetPL( _
-            ByVal species As String, ByVal TCP As Long, _
+            ByVal species As String, ByVal tCP As Long, _
             ByVal iatk As Long, ByVal idef As Long, ByVal ihp As Long) As Double
     Dim cpg, tcpm, PL, CPM, CP As Double
     Dim row As Long
     Dim attrs As Variant
-    If species = "" Or TCP = 0 Then Exit Function
+    If species = "" Or tCP = 0 Then Exit Function
     attrs = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
     cpg = (iatk + attrs(0)) * Sqr(idef + attrs(1)) * Sqr(ihp + attrs(2)) / 10
-    tcpm = Sqr((TCP + 1) / cpg)
+    tcpm = Sqr((tCP + 1) / cpg)
     With shCpm.ListObjects(1)
         On Error GoTo Proc0
         row = WorksheetFunction.Match(tcpm, .ListColumns("CPM").DataBodyRange, -1)
@@ -393,7 +393,7 @@ Proc1:
             row = row + 1
             CPM = .ListColumns("CPM").DataBodyRange.cells(row, 1)
             CP = WorksheetFunction.Floor(cpg * CPM * CPM, 1)
-        Loop While CP > TCP
+        Loop While CP > tCP
         getTargetPL = .ListColumns("PL").DataBodyRange.cells(row, 1)
     End With
     Exit Function
@@ -403,20 +403,20 @@ End Function
 
 '   目標PLの取得
 '   atk, def,hpは現在のPower、PLは現在のPL
-Public Function getPLbyCP(ByVal TCP As Long, ByVal PL As Double, _
+Public Function getPLbyCP(ByVal tCP As Long, ByVal PL As Double, _
             ByVal atk As Double, _
             ByVal def As Double, _
             ByVal hp As Double) As Double
     Dim cpg, CPMc As Double
-    If TCP = 0 Or PL = 0 Then Exit Function
+    If tCP = 0 Or PL = 0 Then Exit Function
     CPMc = getCPM(PL)
     cpg = atk * Sqr(def) * Sqr(hp) / CPMc ^ 2 / 10
-    getPLbyCP = getPLbyCpg(TCP, cpg)
+    getPLbyCP = getPLbyCpg(tCP, cpg)
 End Function
 
 '   目標CPよりPLを得る2
 '   atk, def, hpは個体値
-Public Function getPLbyCP2(ByVal TCP As Long, _
+Public Function getPLbyCP2(ByVal tCP As Long, _
             ByVal species As String, _
             ByVal atk As Double, _
             ByVal def As Double, _
@@ -425,13 +425,13 @@ Public Function getPLbyCP2(ByVal TCP As Long, _
     Dim cpg As Double
     attr = getSpcAttrs(species, Array("ATK", "DEF", "HP"))
     cpg = (attr(0) + atk) * Sqr(attr(1) + def) * Sqr(attr(2) + hp) / 10
-    getPLbyCP2 = getPLbyCpg(TCP, cpg)
+    getPLbyCP2 = getPLbyCpg(tCP, cpg)
 End Function
 
 '   CPG((種族値＋個体値)の重み積/10)よりPLを得る
-Public Function getPLbyCpg(ByVal TCP As Long, ByVal cpg As Double) As Double
+Public Function getPLbyCpg(ByVal tCP As Long, ByVal cpg As Double) As Double
     Dim CPM, tPL As Double
-    CPM = Sqr((TCP + 1) / cpg)
+    CPM = Sqr((tCP + 1) / cpg)
     tPL = getPLbyCPM(CPM, True)
     If getCPM(tPL) >= CPM Then tPL = tPL - 0.5
     If tPL < 1 Then tPL = 1
@@ -624,7 +624,7 @@ End Function
         
 
 '   セルに複数タイプを書き込む。旧setTypeStr
-Public Function setTypeToCell(ByVal types As Variant, ByVal Target As Excel.Range, _
+Public Function setTypeToCell(ByVal types As Variant, ByVal target As Excel.Range, _
         Optional ByVal synonym As Boolean = False)
     Dim i, j, ti, num As Long
     Dim str As String
@@ -648,11 +648,11 @@ Public Function setTypeToCell(ByVal types As Variant, ByVal Target As Excel.Rang
         items(i, 2) = Len(items(i, 0))
         items(i, 3) = getTypeColor(ti)
     Next
-    Call writeColoredStr(Target, str, items)
+    Call writeColoredStr(target, str, items)
 End Function
 
 '   セルに複数のわざ名を色付きで書き込む
-Public Function setAtkNames(ByVal atkClass As Variant, ByVal atkNames As Variant, ByVal Target As Excel.Range)
+Public Function setAtkNames(ByVal atkClass As Variant, ByVal atkNames As Variant, ByVal target As Excel.Range)
     Dim items() As Variant
     Dim i, j, ti As Long
     Dim line, name As String
@@ -667,14 +667,14 @@ Public Function setAtkNames(ByVal atkClass As Variant, ByVal atkNames As Variant
         items(i, 3) = getTypeColor(ti)
         line = line & name
     Next
-    Call writeColoredStr(Target, line, items)
+    Call writeColoredStr(target, line, items)
 End Function
 
 '   文字列を色付きで書き込む
-Public Function writeColoredStr(ByVal Target As Excel.Range, _
+Public Function writeColoredStr(ByVal target As Excel.Range, _
                     ByVal str As String, ByVal info As Variant)
     Dim i As Long
-    With Target
+    With target
         .value = str
         For i = 0 To UBound(info, 1)
             If info(i, 1) < 1 Then Exit For
@@ -740,6 +740,19 @@ Public Function setWeatherToCell(ByVal cel As Range, _
     End If
     setWeatherToCell = weather
 End Function
+
+'   リーグをインデックスで取得
+Public Function getLeagueIndex(ByVal league As String) As Integer
+    getLeagueIndex = 0
+    If league = C_League1 Then
+        getLeagueIndex = 1
+    ElseIf league = C_League2 Then
+        getLeagueIndex = 2
+    ElseIf league = C_League3 Then
+        getLeagueIndex = 3
+    End If
+End Function
+
 
 '   自動目標（リーグ名）によるCP上限の取得
 Public Function getCpUpper(ByVal league As String, _
@@ -860,3 +873,24 @@ Private Function traceEvolution(ByVal species As String, _
     End If
     traceEvolution = joinStrList(ng2s, dir)
 End Function
+
+'   16進数文字列より個々の個体値を得る
+Public Function getIndValues(ByVal str As String, _
+                        ByRef atk As Long, ByRef def As Long, _
+                        ByRef hp As Long) As Boolean
+    Dim pos As Integer
+    getIndValues = False
+    pos = InStr(str, ",")
+    If pos > 0 Then
+        str = Trim(left(str, pos - 1))
+    Else
+        str = Trim(str)
+    End If
+    If Len(str) < 3 Then Exit Function
+    atk = val("&H" + Mid(str, 1, 1))
+    def = val("&H" + Mid(str, 2, 1))
+    hp = val("&H" + Mid(str, 3, 1))
+    getIndValues = True
+End Function
+
+
