@@ -37,7 +37,8 @@ Private Sub btnExpotBasicData_Click()
 End Sub
 
 Private Sub btnImportTest_Click()
-    Call MargeImportBasicData(False, True)
+    Call MargeImportBasicData(False, True, _
+            chkSpeciesAnaWithLimited.value)
 End Sub
 
 '   基本データのマージインポート
@@ -67,9 +68,9 @@ End Sub
 
 '   種族分析シートの再作成
 Private Sub btnMakeSpeciesAnalysis_Click()
-    Call shSpeciesAnalysis1.makeTableSpeciesAna1( _
-            chkSpeciesAnaWithLimited.value)
+    Call makeSpeciesSheetsAndMaps(chkSpeciesAnaWithLimited.value)
 End Sub
+
 
 '   非表示列の表示
 Private Sub btnShowHiddenColumns_Click()
@@ -100,6 +101,17 @@ Private Sub btnAllUpdate_Click()
     Call shNewEntries.makeNewEntries
 End Sub
 
+'   種族関連のシートをすべて作成
+Public Sub makeSpeciesSheetsAndMaps(Optional ByVal withLimitedAtk As Boolean = True)
+    Dim sh As Variant
+    Call shSpeciesAnalysis1.makeTableSpeciesAna1(withLimitedAtk)
+    For Each sh In getSheetsByName(SBL_R_Settings)
+        Call sblMakeTable(sh)
+    Next
+    For Each sh In getSheetsByName(SMAP_R_Settings)
+        Call sh.MakeMap
+    Next
+End Sub
 
 '   種族・技シートのソート
 Public Sub SortBasicTables()
@@ -140,7 +152,8 @@ End Function
 
 '   種族と技のデータのマージインポート
 Public Function MargeImportBasicData(Optional ByVal overwrite As Boolean = False, _
-                Optional ByVal isTest As Boolean = False)
+                Optional ByVal isTest As Boolean = False, _
+                Optional ByVal withLimitedAtk As Boolean = True)
     Dim atkCols As Variant
     Dim log, sh As Variant
     Dim ln As Integer
@@ -175,7 +188,7 @@ Public Function MargeImportBasicData(Optional ByVal overwrite As Boolean = False
         Call shNormalAttack.alignNormalAtkTable
         Call shSpecialAttack.alignSpecialAtkTable
         Call shClassifiedByType.makeTableClassifiedByType
-        Call shSpeciesAnalysis1.makeTableSpeciesAna1
+        Call makeSpeciesSheetsAndMaps(withLimitedAtk)
     End If
     Call margeLog(log, isTest)
     Call doMacro

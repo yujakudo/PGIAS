@@ -3,7 +3,7 @@ Attribute VB_Name = "Battle"
 Option Explicit
 
 '   SL, HLで戦力外になるライン
-Const OUT_OF_LEAGUE_LINE As Integer = 200
+Const OUT_OF_LEAGUE_LINE As Integer = 500
 
 '   ゲージの最大量
 Const RSV_MAX As Double = 100#
@@ -1429,7 +1429,6 @@ Function getFitIndiv(ByRef self As Monster, ByVal tCP As Long, _
     Dim enemy As Monster
     
     '   charge countを計算しておく
-'    If Not calcAndStoreChargeCount(self, 1) Then Exit Function
     If Not calcChargeCount(self) Then Exit Function
     
     Call getMonsterByPower(enemy)
