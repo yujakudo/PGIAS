@@ -200,6 +200,18 @@ Public Const IMAP_Endurance As String = "耐久力"
 Public Const IMAP_CDPS As String = "cDPS"
 Public Const IMAP_isPrediction As String = "予測か"
 
+'   マップ補助線
+Public Const C_AuxLine As String = "補助線"
+Public Const AL_R_Table As String = "マップ補助線表"
+Public Const AL_R_Settings As String = "マップ補助線設定"
+Public Const AL_Type As String = "タイプ"
+Public Const AL_CoefA As String = "係数a"
+Public Const AL_CoefB As String = "係数b"
+Public Const AL_RangeFrom As String = "ここから"
+Public Const AL_RangeTo As String = "ここまで"
+Public Const AL_Linear As String = "線形"
+Public Const AL_Power As String = "べき乗"
+
 
 '   種族
 Public Const R_SpeciesTable As String = "種族元表"

@@ -262,7 +262,7 @@ Private Sub setSpeciesOnAtk(ByVal species As String)
 '                            .ListObjects(1).HeaderRowRange, 0)
 '                    Application.Calculate '要検討
 '                End If
-                Application.Goto .cells(1, gcol), True
+                Application.GoTo .cells(1, gcol), True
             End With
         End With
     Next
@@ -472,6 +472,7 @@ End Sub
 '   個体値の16進数を10進数に変換する
 Public Sub decimalizeIndivValue(ByVal target As Range)
     Dim c As Integer
+    If target.text = "" Then Exit Sub
     c = Asc(UCase(left(target.text, 1))) - 55
     If 9 < c And c < 16 Then
         target.value = c

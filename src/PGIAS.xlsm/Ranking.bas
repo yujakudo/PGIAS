@@ -194,7 +194,7 @@ Private Sub ClearAllRanking(ByVal sh As Worksheet, _
         Call ClearCalcedRank(lo.DataBodyRange, remove)
     End If
     sh.Range(CR_R_AllCalcTime).ClearContents
-    Application.Goto lo.DataBodyRange.cells(1, 1)
+    Application.GoTo lo.DataBodyRange.cells(1, 1)
 End Sub
 
 '   ”ÍˆÍ‚ÅƒNƒŠƒA

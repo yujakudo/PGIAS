@@ -316,13 +316,13 @@ Public Sub allClear(Optional ByVal comfirm As Boolean = True)
             If sh.ListObjects.count > 0 Then
                 With sh.ListObjects(1)
                     If Not .DataBodyRange Is Nothing Then
-                        Application.Goto .DataBodyRange.cells(1, 1)
+                        Application.GoTo .DataBodyRange.cells(1, 1)
                     Else
-                        Application.Goto .HeaderRowRange.cells(1, 1).Offset(1, 0)
+                        Application.GoTo .HeaderRowRange.cells(1, 1).Offset(1, 0)
                     End If
                 End With
             ElseIf Not sh Is shLicenseAgreement Then
-                Application.Goto sh.cells(1, 1), True
+                Application.GoTo sh.cells(1, 1), True
             End If
             '   Šg‘å—¦
             If InStr(sh.name, C_Map) > 0 Then

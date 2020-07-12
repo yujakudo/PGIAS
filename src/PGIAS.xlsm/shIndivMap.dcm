@@ -22,6 +22,11 @@ Private Sub clearInputs(Optional ByRef rngTbl As Range = Nothing)
     Application.EnableEvents = prev
 End Sub
 
+'   補助線の作成ボタン
+Private Sub btnAuxLine_Click()
+    Call makeAuxLine(Me)
+End Sub
+
 '   マップを作るボタン
 Private Sub btnMakeMap_Click()
     Call MakeMap
@@ -34,6 +39,7 @@ Public Sub MakeMap(Optional ByVal sequence As FMAP_FLAG = FMAP_ALL)
     Set settings = getSettings(Range(IMAP_R_Settings))
     Set rngTbl = Range(IMAP_R_Table)
     Call makeIndivMap(rngTbl, settings, sequence)
+    Call makeAuxLine(Me)
     Call clearInputs(rngTbl)
 End Sub
 
@@ -49,6 +55,7 @@ End Sub
 Private Sub chkShowPrediction_Click()
     Call Worksheet_Change(Range(IMAP_R_IndivSelect))
 End Sub
+
 
 '   シートの変更
 Private Sub Worksheet_Change(ByVal target As Range)
@@ -87,6 +94,8 @@ End Sub
 Public Sub initSheet()
     Call ClearIndivMap
     Call initSettings
+    Call initAuxLineSettings(Me)
+    Range(AL_R_Table).ClearContents
 End Sub
 
 '   設定初期化

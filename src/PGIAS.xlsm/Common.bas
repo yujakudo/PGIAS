@@ -716,7 +716,7 @@ Public Sub jumpTo(ByVal sbj As Variant, Optional ByVal log As Boolean = True)
         Application.EnableEvents = state
         If log Then Call onSheetChange(sh)
     End If
-    If Not cel Is Nothing Then Application.Goto cel
+    If Not cel Is Nothing Then Application.GoTo cel
 End Sub
 
 Public Sub historyReset()

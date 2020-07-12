@@ -21,6 +21,11 @@ Private Sub clearInputs(Optional ByRef rngTbl As Range = Nothing)
     Application.EnableEvents = prev
 End Sub
 
+'   補助線の作成ボタン
+Private Sub btnAuxLine_Click()
+    Call makeAuxLine(Me)
+End Sub
+
 '   マップを作るボタン
 Private Sub btnMakeMap_Click()
     Call MakeMap
@@ -33,6 +38,7 @@ Public Sub MakeMap()
     Set settings = getSettings(Range(SMAP_R_Settings))
     Set rngTbl = Range(SMAP_R_Table)
     Call makeSpeciesMap(rngTbl, settings)
+    Call makeAuxLine(Me)
     Call clearInputs(rngTbl)
 End Sub
 
@@ -54,8 +60,10 @@ Private Sub Worksheet_Activate()
         str = str & "," & shs(i).name
     Next
     With Range(R_SpeciesMapSettings).cells(2, 1)
+        On Error GoTo Continue
         .Validation.Delete
         .Validation.Add Type:=xlValidateList, Formula1:=str
+Continue:
     End With
 End Sub
 
@@ -93,5 +101,7 @@ End Sub
 '   すべて初期化
 Public Sub initSheet()
     Call initSpecMapSettings(Me, shSpeciesAnalysis1.name)
+    Call initAuxLineSettings(Me)
+    Range(AL_R_Table).ClearContents
     Call MakeMap
 End Sub

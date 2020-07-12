@@ -1030,7 +1030,6 @@ End Function
 Public Sub initSpecMapSettings(ByRef sh As Worksheet, _
                     Optional ByVal shName As String = "")
     Dim settings As Object
-    Dim curSettings As Object
     
     Call doMacro(msgstr(msgInitializing, sh.name))
     Set settings = CreateObject("Scripting.Dictionary")
@@ -1047,5 +1046,100 @@ Public Sub initSpecMapSettings(ByRef sh As Worksheet, _
     End If
     Call setSettings(sh.Range(SMAP_R_Settings), settings)
     Call doMacro
+End Sub
+
+'   ï‚èïê¸ê›íËÇÃèâä˙âª
+Public Sub initAuxLineSettings(ByRef sh As Worksheet)
+    Dim settings As Object
+    
+    Call doMacro(msgstr(msgInitializing, sh.name))
+    Set settings = CreateObject("Scripting.Dictionary")
+    settings.item(AL_Type) = C_None
+    settings.item(AL_CoefA) = 300
+    settings.item(AL_CoefB) = -1
+    settings.item(AL_RangeFrom) = 10
+    settings.item(AL_RangeTo) = 40
+    Call setSettings(sh.Range(AL_R_Settings), settings)
+    Call doMacro
+End Sub
+
+'   ï‚èïê¸çÏê¨
+Public Sub makeAuxLine(ByVal sh As Worksheet)
+    Dim settings As Object
+    Dim tbl As Range
+    Set settings = getSettings(sh.Range(AL_R_Settings))
+    Call removeAuxLine(sh)
+    If settings(AL_Type) = C_None Then
+        Exit Sub
+    End If
+    Set tbl = sh.Range(AL_R_Table)
+    Call doMacro(msgstr(msgMaking, C_AuxLine))
+    Call makeAuxTable(settings, tbl)
+    Call drawAuxLine(settings, tbl)
+    Call doMacro
+End Sub
+
+Private Sub removeAuxLine(ByVal sh As Worksheet)
+    With sh.ChartObjects(1).Chart.SeriesCollection
+        If .count < 2 Then Exit Sub
+        .item(2).Delete
+    End With
+End Sub
+
+Private Sub makeAuxTable(ByRef settings As Object, ByRef tbl As Range)
+    Dim x, y, stp, k(1) As Double
+    Dim i, lim As Integer
+    k(1) = settings(AL_CoefA)
+    k(0) = settings(AL_CoefB)
+    lim = tbl.rows.count - 1
+    x = settings(AL_RangeFrom)
+    If x = 0 Then x = 0.000001
+    stp = (settings(AL_RangeTo) - x) / lim
+    For i = 0 To lim
+        tbl.cells(i + 1, 1) = x
+        Select Case settings(AL_Type)
+            Case AL_Linear
+                y = k(1) * x + k(0)
+            Case AL_Power
+                y = k(1) * x ^ k(0)
+        End Select
+        tbl.cells(i + 1, 2) = y
+        x = x + stp
+    Next
+End Sub
+
+'   ï‚èïê¸ÇÃï`âÊ
+Private Sub drawAuxLine(ByRef settings As Object, ByRef tbl As Range)
+    Dim co As ChartObject
+    Dim sh As Worksheet
+    Set sh = tbl.Parent
+    Set co = sh.ChartObjects(1)
+    With co.Chart.SeriesCollection
+        If .count < 1 Then Exit Sub
+        If .count < 2 Then .NewSeries
+    End With
+    With co.Chart.FullSeriesCollection(2)
+        .XValues = "=" & sh.name & "!" & tbl.columns(1).Address
+        .Values = "=" & sh.name & "!" & tbl.columns(2).Address
+        .DataLabels.ShowValue = False
+        .Format.line.visible = msoFalse
+        .MarkerStyle = -4142
+        .Trendlines.Add
+        With .Trendlines(1)
+            Select Case settings(AL_Type)
+                Case AL_Linear
+                    .Type = xlLinear
+                Case AL_Power
+                    .Type = xlPower
+            End Select
+            With .Format.line
+                .visible = msoTrue
+                .ForeColor.ObjectThemeColor = msoThemeColorAccent2
+                .ForeColor.TintAndShade = 0
+                .ForeColor.Brightness = -0.25
+                .Transparency = 0.5
+            End With
+        End With
+    End With
 End Sub
 

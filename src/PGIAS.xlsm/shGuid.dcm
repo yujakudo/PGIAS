@@ -172,7 +172,7 @@ Private Sub cmbTOC_Change()
         dir = row - cel.row
         dir = Sgn(dir) + Fix(dir / 5)
         Set cel = cel.Offset(dir, 0)
-        Application.Goto cel
+        Application.GoTo cel
         ActiveWindow.ScrollRow = cel.row
     Loop
 End Sub

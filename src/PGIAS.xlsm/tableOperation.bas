@@ -459,7 +459,7 @@ Private Sub sblSetAtkParams(ByVal cel As Range, ByRef mon As Monster, _
     ofs = Array(0, cols(5) - cols(4), cols(6) - cols(4), cols(7) - cols(4))
     Call calcADamage(C_IdNormalAtk, mon, enemy, True)
     With mon.attacks(mon.atkIndex(0).selected)
-        attr = getAtkAttrs(C_IdNormalAtk, .name, Array(ATK_EPS, ATK_IdleTurnNum))
+        attr = getAtkAttrs(C_IdNormalAtk, .name, Array(ATK_EPT, ATK_IdleTurnNum))
         sh.cells(row, cols(1)).value = .damage
         sh.cells(row, cols(2)).value = .damage / attr(1)
         sh.cells(row, cols(3)).value = attr(0)
